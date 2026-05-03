@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="description" content="Advanced cloud resource simulator using M/M/k model with Auto-scaling, Load Balancer, and Network Simulation"/>
+<meta name="author" content="SRM Simulator"/>
+<meta name="keywords" content="M/M/k, Auto-scaling, Load Balancer, Queueing Theory, Cloud Computing"/>
+<meta name="theme-color" content="#070a0f"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<title>SRM Simulator · Auto-Scaling M/M/k · Smart Resource Monitoring</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+/* نفس الـ CSS الموجود مع إضافة تحسينات */
+:root{
+  --bg:#070a0f;--bg2:#0d1117;--surface:#111820;--surface2:#172030;
+  --border:#1e2d3d;--border2:#263545;--text:#e2eaf5;--text2:#7a90a8;--text3:#4a6070;
+  --blue:#3b9eff;--blue2:#1a6fd4;--cyan:#00d4ff;--green:#00e47c;
+  --orange:#ffb020;--red:#ff4560;--purple:#a78bfa;--pink:#f472b6;
+  --fh:'Cairo',sans-serif;--fm:'Space Mono',monospace;
+  --focus-ring:0 0 0 2px rgba(59,158,255,0.4);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:var(--fh);overflow-x:hidden}
+:focus-visible{outline:none;box-shadow:var(--focus-ring);border-radius:4px}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+body::after{content:"v4.0 · Production Ready · Optimized";position:fixed;bottom:8px;right:12px;font-size:8px;font-family:var(--fm);color:var(--text3);background:rgba(0,0,0,.5);padding:2px 8px;border-radius:12px;z-index:1000;pointer-events:none}
+nav{display:flex;align-items:center;justify-content:space-between;padding:13px 22px;
+  border-bottom:1px solid var(--border);background:rgba(7,10,15,.96);
+  backdrop-filter:blur(14px);position:sticky;top:0;z-index:200;gap:10px;flex-wrap:wrap}
+.nl{font-size:12px;font-weight:800;letter-spacing:.12em;color:var(--cyan);text-transform:uppercase;white-space:nowrap}
+.nt{display:flex;gap:3px;flex-wrap:wrap}
+.ntb{padding:5px 13px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;
+  border:1px solid transparent;color:var(--text2);transition:all .18s;background:transparent;font-family:var(--fh)}
+.ntb:hover{color:var(--text);border-color:var(--border2)}
+.ntb.active{color:var(--cyan);border-color:var(--cyan);background:rgba(0,212,255,.07)}
+.nr{display:flex;align-items:center;gap:8px}
+.badge{font-size:10px;font-family:var(--fm);padding:4px 11px;border-radius:20px;border:1px solid;letter-spacing:.06em;font-weight:700}
+.bs{color:var(--green);border-color:rgba(0,228,124,.35);background:rgba(0,228,124,.08)}
+.bw{color:var(--orange);border-color:rgba(255,176,32,.35);background:rgba(255,176,32,.08)}
+.bd{color:var(--red);border-color:rgba(255,69,96,.35);background:rgba(255,69,96,.08)}
+#gt{font-family:var(--fm);font-size:11px;color:var(--text3)}
+.page{display:none;padding:18px 22px;min-height:calc(100vh - 53px)}
+.page.active{display:block}
+.hw-banner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.18);border-radius:9px;
+  padding:9px 14px;margin-bottom:12px;font-size:11px;font-family:var(--fm)}
+.disc{background:rgba(255,176,32,.04);border:1px solid rgba(255,176,32,.15);border-radius:8px;
+  padding:7px 13px;margin-bottom:12px;font-size:10px;font-family:var(--fm);color:var(--text3);
+  display:flex;gap:14px;flex-wrap:wrap;line-height:1.7}
+.mrow{display:grid;grid-template-columns:repeat(9,1fr);gap:8px;margin-bottom:12px}
+@media(max-width:1100px){.mrow{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:600px){.mrow{grid-template-columns:repeat(2,1fr)}}
+.mc{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:11px 13px;position:relative;overflow:hidden}
+.mc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.mc.bl::before{background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.mc.or::before{background:linear-gradient(90deg,var(--orange),var(--pink))}
+.mc.pu::before{background:linear-gradient(90deg,var(--purple),var(--blue))}
+.mc.gr::before{background:linear-gradient(90deg,var(--green),var(--cyan))}
+.mc.re::before{background:linear-gradient(90deg,var(--red),var(--orange))}
+.mc.te::before{background:linear-gradient(90deg,var(--cyan),var(--green))}
+.mc.pi::before{background:linear-gradient(90deg,var(--pink),var(--purple))}
+.mc.wh::before{background:linear-gradient(90deg,#fff,var(--cyan))}
+.mc.sl::before{background:linear-gradient(90deg,var(--red),var(--pink))}
+.ml{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;font-family:var(--fm)}
+.mv{font-size:20px;font-weight:800;line-height:1;font-family:var(--fm)}
+.ms{font-size:9px;color:var(--text3);margin-top:3px;font-family:var(--fm)}
+.mbar{height:3px;border-radius:3px;background:var(--border);margin-top:6px;overflow:hidden}
+.mbar-f{height:100%;border-radius:3px;transition:width .5s,background .5s}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px}
+.ct{font-size:9px;font-family:var(--fm);color:var(--text3);text-transform:uppercase;
+  letter-spacing:.1em;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.ct span{color:var(--text2)}
+.cw{position:relative;height:155px}
+.lg{display:flex;flex-wrap:wrap;gap:10px;margin-top:7px}
+.li{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text3);font-family:var(--fm)}
+.ld{width:16px;height:2px;border-radius:2px}
+.g21{display:grid;grid-template-columns:3fr 2fr;gap:12px}
+.g11{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g111{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.g211{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px}
+.g1111{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px}
+@media(max-width:900px){.g21,.g11,.g111,.g211,.g1111{grid-template-columns:1fr}}
+.mt{margin-top:12px}
+.lbox{height:155px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+.ll{font-size:10px;font-family:var(--fm);padding:3px 7px;border-radius:4px;background:var(--bg2);color:var(--text2);line-height:1.5}
+.ll.g{color:var(--green)}.ll.w{color:var(--orange)}.ll.r{color:var(--red)}.ll.b{color:var(--cyan)}.ll.p{color:var(--purple)}
+.sr{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:11px}
+.sr:last-child{border-bottom:none}
+.sk{color:var(--text3);font-family:var(--fm)}.sv{font-weight:700;font-family:var(--fm)}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:6px}
+.sn{border:1px solid var(--border2);border-radius:7px;padding:8px 4px;text-align:center;background:var(--bg2);transition:all .3s;position:relative}
+.sn.sa{border-color:var(--green);background:rgba(0,228,124,.05)}
+.sn.sh{border-color:var(--orange);background:rgba(255,176,32,.06)}
+.sn.so{border-color:var(--red);background:rgba(255,69,96,.06);animation:pulse .7s infinite}
+.sn.sd{border-color:var(--text3);background:rgba(74,96,112,.07);opacity:.5}
+.sn .down-badge{position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;font-size:8px;
+  padding:1px 4px;border-radius:4px;font-family:var(--fm);font-weight:700}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.si{font-size:14px;margin-bottom:2px}
+.sl{font-size:8px;font-family:var(--fm);color:var(--text3)}
+.sv2{font-size:9px;font-family:var(--fm);margin-top:2px;font-weight:700}
+.sq{font-size:8px;font-family:var(--fm);color:var(--text3);margin-top:1px}
+.btn-row{display:flex;gap:7px;flex-wrap:wrap}
+button{padding:6px 16px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;
+  border:1px solid var(--border2);background:var(--surface2);color:var(--text);
+  transition:all .15s;font-family:var(--fh);letter-spacing:.03em}
+button:hover{border-color:var(--blue);color:var(--blue)}
+button:active{transform:scale(0.98)}
+.bp{background:linear-gradient(135deg,var(--blue),var(--blue2))!important;color:#fff!important;border-color:var(--blue)!important}
+.br{border-color:rgba(255,69,96,.4)!important;color:var(--red)!important;background:rgba(255,69,96,.08)!important}
+.bw2{border-color:rgba(255,176,32,.4)!important;color:var(--orange)!important;background:rgba(255,176,32,.08)!important}
+.bg2{border-color:rgba(0,228,124,.4)!important;color:var(--green)!important;background:rgba(0,228,124,.08)!important}
+.sg{display:flex;flex-direction:column;gap:5px}
+.slbl{display:flex;justify-content:space-between;font-size:10px;font-family:var(--fm);color:var(--text2)}
+.slbl em{color:var(--cyan);font-style:normal;font-weight:700}
+input[type=range]{width:100%;height:4px;accent-color:var(--blue);cursor:pointer;border-radius:4px}
+input[type=range]:focus{outline:var(--focus-ring)}
+.abtns{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.abn{padding:5px 13px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;
+  border:1px solid var(--border2);background:transparent;color:var(--text2);font-family:var(--fm);transition:all .15s}
+.abn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.08)}
+.sdg{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:12px}
+.sdc{border:1px solid var(--border);border-radius:9px;padding:11px;background:var(--bg2);transition:all .3s;position:relative}
+.sdc.sh2{border-color:var(--orange)}.sdc.so2{border-color:var(--red)}.sdc.sd2{border-color:var(--text3);opacity:.6}
+.sdtop{display:flex;justify-content:space-between;font-size:10px;font-family:var(--fm);color:var(--text2);margin-bottom:7px}
+.sdnum{font-size:18px;font-weight:800;font-family:var(--fm)}
+.sdbw{background:var(--border);border-radius:4px;height:4px;margin:5px 0;overflow:hidden}
+.sdbar{height:100%;border-radius:4px;transition:width .4s,background .4s}
+.sdsub{font-size:9px;font-family:var(--fm);color:var(--text3)}
+.sdc .down-tag{position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;
+  font-size:8px;padding:1px 5px;border-radius:4px;font-family:var(--fm);font-weight:700}
+.bign{text-align:center;padding:16px 0}
+.bigv{font-size:44px;font-weight:800;font-family:var(--fm)}
+.bigu{font-size:12px;color:var(--text3);margin-top:3px;font-family:var(--fm)}
+.pflow{height:50px;position:relative;overflow:hidden;background:var(--bg2);border-radius:7px;margin-top:8px}
+.pkt{position:absolute;top:50%;transform:translateY(-50%);width:6px;height:6px;border-radius:50%}
+.pkt.ok{background:var(--green)}.pkt.slow{background:var(--orange)}.pkt.drop{background:var(--red)}
+@keyframes flow{from{left:-10px}to{left:calc(100% + 10px)}}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+@media(max-width:700px){.tgrid{grid-template-columns:1fr}}
+.tc{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:18px}
+.ttag{display:inline-block;font-size:9px;font-family:var(--fm);padding:2px 8px;
+  border-radius:4px;margin-bottom:8px;letter-spacing:.06em;border:1px solid}
+.tag1{color:var(--cyan);border-color:rgba(0,212,255,.3);background:rgba(0,212,255,.06)}
+.tag2{color:var(--green);border-color:rgba(0,228,124,.3);background:rgba(0,228,124,.06)}
+.tag3{color:var(--orange);border-color:rgba(255,176,32,.3);background:rgba(255,176,32,.06)}
+.tag4{color:var(--purple);border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.06)}
+.tag5{color:var(--pink);border-color:rgba(244,114,182,.3);background:rgba(244,114,182,.06)}
+.tag6{color:var(--red);border-color:rgba(255,69,96,.3);background:rgba(255,69,96,.06)}
+.ttitle{font-size:14px;font-weight:800;margin-bottom:7px}
+.tbody{font-size:11px;color:var(--text2);line-height:1.75;margin-bottom:10px}
+.fblock{background:var(--bg2);border:1px solid var(--border2);border-radius:7px;
+  padding:11px;font-family:var(--fm);font-size:11px;color:var(--purple);margin-bottom:8px;line-height:2}
+.fblock .cmt{color:var(--text3);font-size:9px}
+.cr{display:flex;justify-content:space-between;padding:5px 0;font-size:11px;
+  border-bottom:1px solid var(--border);font-family:var(--fm)}
+.cr:last-child{border-bottom:none}
+.ck{color:var(--text2)}.cv{font-weight:700}
+.frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 3px}
+.fn{border-bottom:1.5px solid currentColor;padding:0 3px 2px;font-size:12px;line-height:1.2}
+.fd{padding:2px 3px 0;font-size:12px;line-height:1.2}
+.facad{display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-family:var(--fm);font-size:13px;
+  color:var(--purple);background:var(--bg2);border:1px solid var(--border2);border-radius:7px;
+  padding:11px 14px;margin-bottom:8px}
+.facad .note{font-size:9px;color:var(--text3);margin-top:4px;line-height:1.7;width:100%}
+.smcg{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}
+.smc{background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:9px 10px}
+.smcl{font-size:9px;font-family:var(--fm);color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+.smcv{font-size:11px;font-family:var(--fm);font-weight:700}
+.smcd{font-size:9px;color:var(--text3);margin-top:2px;line-height:1.5}
+.cmp-table{width:100%;border-collapse:collapse;font-size:10px;font-family:var(--fm);margin-top:8px}
+.cmp-table th{padding:6px 8px;text-align:left;color:var(--text3);font-size:9px;text-transform:uppercase;
+  letter-spacing:.07em;border-bottom:1px solid var(--border);background:var(--bg2)}
+.cmp-table td{padding:6px 8px;border-bottom:1px solid rgba(30,45,61,.4);color:var(--text2)}
+.cmp-table tr:last-child td{border-bottom:none}
+.o1c{color:var(--green);font-weight:700}.onc{color:var(--orange);font-weight:700}
+.cost-banner{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.rpw{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:20px;margin-top:12px}
+.rph{text-align:center;border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:16px}
+.rptitle{font-size:18px;font-weight:800;margin-bottom:3px}
+.rpsub{font-size:11px;color:var(--text2);font-family:var(--fm)}
+.rpsc{margin-bottom:16px}
+.rpst{font-size:9px;font-family:var(--fm);text-transform:uppercase;letter-spacing:.1em;
+  color:var(--cyan);margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid rgba(0,212,255,.2)}
+.rptbl{width:100%;border-collapse:collapse;font-size:11px;font-family:var(--fm)}
+.rptbl th{padding:6px 9px;text-align:left;color:var(--text3);font-size:9px;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)}
+.rptbl td{padding:6px 9px;border-bottom:1px solid rgba(30,45,61,.5);color:var(--text2)}
+.rptbl tr:last-child td{border-bottom:none}
+.rp2c{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rpst2{background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:10px}
+.rpsl{font-size:9px;color:var(--text3);font-family:var(--fm);margin-bottom:3px;text-transform:uppercase;letter-spacing:.07em}
+.rpsv{font-size:16px;font-weight:800;font-family:var(--fm)}
+@media print{
+  nav,.print-btns,button{display:none!important}
+  body{background:#fff;color:#000}
+  body::after{display:none}
+  .rpw{background:#fff;border:none}
+  .rpst{color:#1a6fd4}.rpst2{background:#f5f7fa;border:1px solid #ddd}
+  .rptbl th,.rptbl td,.rpsub,.tbody,.sk,.rpsv,.rpsl{color:#333}
+}
+[data-tip]{position:relative;cursor:help}
+[data-tip]::after{
+  content:attr(data-tip);
+  position:absolute;bottom:110%;left:50%;transform:translateX(-50%);
+  background:var(--surface2);border:1px solid var(--border2);
+  color:var(--text);font-size:10px;font-family:var(--fm);
+  padding:7px 11px;border-radius:7px;white-space:nowrap;
+  opacity:0;pointer-events:none;transition:opacity .2s;z-index:300;
+  line-height:1.8;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+[data-tip]:hover::after{opacity:1}
+canvas{max-width:100%;height:auto}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+</style>
+</head>
+<body>
+
+<nav aria-label="Main Navigation">
+  <div class="nl" id="lang-nav-title">⚡ SRM Simulator · M/M/k · Final Release</div>
+  <div class="nt" role="tablist">
+    <button class="ntb active" onclick="showPage('dashboard')" role="tab" aria-label="Dashboard" id="lang-btn-dashboard">📊 Dashboard</button>
+    <button class="ntb" onclick="showPage('loadbalancer')" role="tab" aria-label="Load Balancer" id="lang-btn-lb">⚖️ Load Balancer</button>
+    <button class="ntb" onclick="showPage('network')" role="tab" aria-label="Network" id="lang-btn-network">🌐 Network</button>
+    <button class="ntb" onclick="showPage('theory')" role="tab" aria-label="Theory" id="lang-btn-theory">📚 Theory</button>
+    <button class="ntb" onclick="showPage('report')" role="tab" aria-label="Report" id="lang-btn-report">📄 Report</button>
+  </div>
+  <div class="nr">
+    <span id="gt" aria-label="Time">t = 0s</span>
+    <span id="cost-badge" style="font-family:var(--fm);font-size:10px;color:var(--green)" aria-label="Current Cost">$0.00</span>
+    <span class="badge bs" id="sysbadge" data-tip="System status based on ρ and CPU">Stable</span>
+    <button id="lang-toggle" onclick="toggleLang()" style="padding:4px 11px;font-size:10px;border-radius:20px;border:1px solid var(--border2);background:var(--surface2);color:var(--cyan);cursor:pointer;font-family:var(--fh);font-weight:700;letter-spacing:.04em" aria-label="Toggle language">🌐 AR</button>
+  </div>
+</nav>
+
+<div class="page active" id="page-dashboard">
+  <div class="hw-banner">
+    <span style="color:var(--cyan);font-weight:700;font-size:11px" id="lang-hw-label">🖥 Real Hardware</span>
+    <span style="color:var(--text2)"><span id="lang-hw-cores-label">Cores:</span> <b id="hw-cores" style="color:var(--green)">…</b></span>
+    <span style="color:var(--text2)"><span id="lang-hw-ram-label">Memory:</span> <b id="hw-ram" style="color:var(--green)">…</b></span>
+    <span style="color:var(--text2)"><span id="lang-hw-net-label">Network:</span> <b id="hw-net" style="color:var(--green)">…</b></span>
+    <span style="color:var(--text2)"><span id="lang-hw-plat-label">Platform:</span> <b id="hw-plat" style="color:var(--green)">…</b></span>
+    <span style="color:var(--text3);margin-left:auto;font-size:9px" id="lang-hw-note">Simulated CPU ratio using EWMA + noise | optimised v4.0</span>
+  </div>
+  <div class="disc">
+    <span id="lang-disc-service">⚠ <b>Service:</b> Random process using Poisson(k·μ) — true M/M/k model.</span>
+    <span id="lang-disc-cpu">⚠ <b>CPU:</b> EWMA(ρ) + Gaussian noise ε~N(0,σ).</span>
+    <span id="lang-disc-network">⚠ <b>Network:</b> Simplified congestion model.</span>
+    <span id="lang-disc-auto">⚠ <b>Auto-scaling:</b> Composite criterion (CPU + queue).</span>
+  </div>
+  <div class="mrow">
+    <div class="mc bl"><div class="ml" id="lang-mc-cpu-label">CPU (EWMA)</div><div class="mv" id="m-cpu" style="color:var(--blue)">0%</div><div class="ms" id="lang-mc-cpu-sub">ρ = λ/kμ</div><div class="mbar"><div class="mbar-f" id="b-cpu"></div></div></div>
+    <div class="mc or"><div class="ml" id="lang-mc-ram-label">RAM Memory</div><div class="mv" id="m-ram" style="color:var(--orange)">0%</div><div class="ms" id="lang-mc-ram-sub">Base + Queue</div><div class="mbar"><div class="mbar-f" id="b-ram"></div></div></div>
+    <div class="mc pu"><div class="ml" id="lang-mc-queue-label">Queue</div><div class="mv" id="m-queue" style="color:var(--purple)">0</div><div class="ms" id="lang-mc-queue-sub">Total Requests</div></div>
+    <div class="mc gr"><div class="ml" id="lang-mc-k-label">Servers (k)</div><div class="mv" id="m-k" style="color:var(--green)">2</div><div class="ms" id="m-down-info"></div></div>
+    <div class="mc re"><div class="ml" id="lang-mc-rho-label">Utilization ρ</div><div class="mv" id="m-rho" style="color:var(--red)">0.00</div><div class="ms" id="lang-mc-rho-sub">Stable &lt; 1.0</div><div class="mbar"><div class="mbar-f" id="b-rho"></div></div></div>
+    <div class="mc te"><div class="ml" id="lang-mc-tp-label">Throughput</div><div class="mv" id="m-tp" style="color:var(--cyan)">0</div><div class="ms" id="lang-mc-tp-sub">tasks/s</div></div>
+    <div class="mc pi"><div class="ml" id="lang-mc-wt-label">Avg Wait</div><div class="mv" id="m-wt" style="color:var(--pink)">0ms</div><div class="ms" id="lang-mc-wt-sub">Little's Law</div></div>
+    <div class="mc wh"><div class="ml" id="lang-mc-cost-label">Cost</div><div class="mv" id="m-cost" style="color:var(--text);font-size:17px">$0.00</div><div class="ms" id="lang-mc-cost-sub">$0.0083/server/s ($0.5/min)</div></div>
+    <div class="mc sl"><div class="ml" id="lang-mc-sla-label">SLA Violations</div><div class="mv" id="m-sla" style="color:var(--red)">0</div><div class="ms" id="lang-mc-sla-sub">Wait &gt; 200ms</div></div>
+  </div>
+  <div class="g21">
+    <div class="card"><div class="ct"><span id="lang-ct-cpu">CPU Utilization — EWMA Model</span> <span id="rholive">ρ=0.00</span></div><div class="cw"><canvas id="cpuChart" aria-label="CPU utilization chart"></canvas></div><div class="lg"><div class="li"><div class="ld" style="background:var(--blue)"></div><span id="lang-lg-sim">Simulated (EWMA)</span></div><div class="li"><div class="ld" style="background:var(--green)"></div><span id="lang-lg-real">Real (Estimated)</span></div><div class="li"><div class="ld" style="background:var(--red)"></div><span id="lang-lg-thresh">80% Threshold</span></div></div></div>
+    <div class="card"><div class="ct"><span id="lang-ct-srv">Server Nodes</span> <span id="srv-down-count" style="color:var(--red)"></span></div><div class="sgrid" id="srv-grid" role="grid" aria-label="Server grid"></div></div>
+  </div>
+  <div class="cost-banner mt">
+    <div class="card" style="padding:11px"><div class="ml" id="lang-ct-cost-total">Total Cost</div><div class="mv" id="cost-total" style="color:var(--green);font-size:18px">$0.000</div><div class="ms" id="lang-ct-cost-sub">k × $0.0083 × t</div></div>
+    <div class="card" style="padding:11px"><div class="ml" id="lang-ct-cost-task">Cost/Task</div><div class="mv" id="cost-per-task" style="color:var(--cyan);font-size:18px">—</div><div class="ms" id="lang-ct-cost-task-sub">Efficiency Indicator</div></div>
+    <div class="card" style="padding:11px"><div class="ml" id="lang-ct-tasks">Tasks Completed</div><div class="mv" id="m-done" style="color:var(--purple);font-size:18px">0</div><div class="ms" id="lang-ct-tasks-sub">Total</div></div>
+    <div class="card" style="padding:11px"><div class="ml" id="lang-ct-bn">Bottleneck</div><div class="mv" id="m-bn" style="color:var(--green);font-size:14px">None</div><div class="ms" id="m-bn-sub">Healthy</div></div>
+  </div>
+  <div class="g11 mt">
+    <div class="card"><div class="ct" id="lang-ct-mem">Memory and Queue</div><div class="cw"><canvas id="ramChart" aria-label="Memory and queue chart"></canvas></div><div class="lg"><div class="li"><div class="ld" style="background:var(--orange)"></div><span id="lang-lg-ram">RAM %</span></div><div class="li"><div class="ld" style="background:var(--purple)"></div><span id="lang-lg-queue">Queue ×5</span></div></div></div>
+    <div class="card"><div class="ct" id="lang-ct-tp">Throughput vs Arrival</div><div class="cw"><canvas id="tpChart" aria-label="Throughput and arrival chart"></canvas></div><div class="lg"><div class="li"><div class="ld" style="background:var(--cyan)"></div><span id="lang-lg-arr">Arrival λ</span></div><div class="li"><div class="ld" style="background:var(--green)"></div><span id="lang-lg-svc">Service Poisson(kμ)</span></div></div></div>
+  </div>
+  <div class="g111 mt">
+    <div class="card"><div class="ct" id="lang-ct-log">Decision Log</div><div class="lbox" id="log" role="log" aria-label="System log"></div></div>
+    <div class="card"><div class="ct" id="lang-ct-snap">System Snapshot</div>
+      <div class="sr"><span class="sk" id="lang-snap-rho">ρ = λ/(kμ)</span><span class="sv" id="sn-rho">—</span></div>
+      <div class="sr"><span class="sk" id="lang-snap-stable">Stable (ρ&lt;1)</span><span class="sv" id="sn-stable">—</span></div>
+      <div class="sr"><span class="sk" id="lang-snap-avg">CPU Avg 5s</span><span class="sv" id="sn-avg">—</span></div>
+      <div class="sr"><span class="sk" id="lang-snap-mae">MAE Sim/Real</span><span class="sv" id="sn-mae">—</span></div>
+      <div class="sr"><span class="sk" id="lang-snap-rmse">RMSE</span><span class="sv" id="sn-rmse">—</span></div>
+      <div class="sr"><span class="sk" id="lang-snap-scales">Scale Events</span><span class="sv" id="sn-scales">0</span></div>
+      <div class="sr"><span class="sk" id="lang-snap-pred">Predictive</span><span class="sv" id="sn-pred">—</span></div>
+      <div style="margin-top:8px;background:var(--bg2);border:1px solid var(--border2);border-radius:7px;padding:9px 11px;font-family:var(--fm);font-size:9px;color:var(--text3);line-height:2">
+        <div style="color:var(--purple);font-size:10px;margin-bottom:3px;font-weight:700" id="lang-form-title">Core Formulas</div>
+        <div><span style="color:var(--cyan)" id="lang-form-util">ρ = λ / (k·μ)</span> <span id="lang-form-util-sub">— Utilization rate</span></div>
+        <div><span style="color:var(--green)" id="lang-form-stable">ρ &lt; 1</span> <span id="lang-form-stable-ok">→ Stable |</span> <span style="color:var(--red)" id="lang-form-unstable">ρ ≥ 1</span> <span id="lang-form-unstable-bad">→ Queue → ∞</span></div>
+        <div><span style="color:var(--orange)" id="lang-form-little">W = L / λ</span> <span id="lang-form-little-sub">— Little's Law</span></div>
+        <div><span style="color:var(--pink)" id="lang-form-ewma">EWMA: CPU(t) = α·ρ + (1−α)·CPU(t−1)</span></div>
+      </div>
+    </div>
+    <div class="card"><div class="ct" id="lang-ct-controls">Controls</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="sg"><div class="slbl"><span id="lang-ctrl-arr">Arrival Rate λ</span> <em id="ll">4</em><span id="lang-ctrl-arr-unit">/s</span></div><input type="range" min="1" max="25" value="4" id="sl-l" aria-label="Arrival rate"></div>
+        <div class="sg"><div class="slbl"><span id="lang-ctrl-svc">Service Rate μ</span> <em id="lm">5</em><span id="lang-ctrl-svc-unit">/s</span></div><input type="range" min="1" max="20" value="5" id="sl-m" aria-label="Service rate"></div>
+        <div class="sg"><div class="slbl"><span id="lang-ctrl-ram">Base RAM</span> <em id="lr">30</em><span id="lang-ctrl-ram-unit">%</span></div><input type="range" min="10" max="60" value="30" id="sl-r" aria-label="Base memory"></div>
+        <div class="sg"><div class="slbl"><span id="lang-ctrl-mem">RAM/Task</span> <em id="lmem">2</em><span id="lang-ctrl-mem-unit">%</span></div><input type="range" min="1" max="10" value="2" id="sl-mem" aria-label="Memory per task"></div>
+        <div class="btn-row"><button class="bp" onclick="startSim()" aria-label="Start simulation" id="lang-btn-start">▶ Start</button><button onclick="stopSim()" aria-label="Stop simulation" id="lang-btn-pause">⏸ Pause</button><button onclick="resetSim()" aria-label="Reset simulation" id="lang-btn-reset">↺ Reset</button></div>
+        <div class="btn-row"><button class="br" onclick="stressTest()" aria-label="Stress test" id="lang-btn-stress">⚡ Stress (λ=18)</button><button class="br" onclick="ddosAttack()" aria-label="Simulate DDoS attack" id="lang-btn-ddos">💥 DDoS Attack (λ=25)</button><button class="bw2" onclick="scHigh()" aria-label="High load" id="lang-btn-high">📈 High Load (λ=14)</button><button class="bg2" onclick="scLow()" aria-label="Low load" id="lang-btn-low">📉 Low Load (λ=2)</button></div>
+        <div class="btn-row"><button class="bg2" onclick="manualScaleUp()" aria-label="Add server manually" id="lang-btn-add">➕ Add Server</button><button class="br" onclick="manualScaleDown()" aria-label="Remove server manually" id="lang-btn-remove">➖ Remove Server</button></div>
+        <div style="font-size:9px;font-family:var(--fm);color:var(--text3);background:var(--bg2);border-radius:5px;padding:6px 8px;border:1px solid var(--border2);line-height:1.8" id="lang-auto-info">
+          <span style="color:var(--orange)">Auto-scaling:</span> Scale-up: Avg CPU > 80% or Queue > 15 | Scale-down: Avg CPU &lt; 30% and Queue &lt; 5 | Cooldown: 5s
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-loadbalancer" role="tabpanel">
+  <div><h2 style="font-size:16px;font-weight:800" id="lang-lb-title">Load Balancer Engine</h2><p style="font-size:11px;color:var(--text2)" id="lang-lb-sub">Queues · Response Time · Fault Handling · Algorithm Comparison</p></div>
+  <div class="abtns"><button class="abn active" onclick="setAlgo('rr',this)" aria-label="Round Robin algorithm" id="lang-btn-rr">Round Robin — O(1)</button><button class="abn" onclick="setAlgo('lc',this)" aria-label="Least Connections algorithm" id="lang-btn-lc">Least Connections — O(n)</button><button class="abn" onclick="setAlgo('wt',this)" aria-label="Weighted algorithm" id="lang-btn-wt">Weighted — O(1)</button><button class="abn" onclick="setAlgo('rnd',this)" aria-label="Random algorithm" id="lang-btn-rnd">Random — O(1)</button></div>
+  <div class="g1111">
+    <div class="card"><div class="ml" id="lang-lb-avg">Avg Response Time</div><div class="mv" id="lb-avgrt" style="color:var(--cyan);font-size:18px">— ms</div></div>
+    <div class="card"><div class="ml" id="lang-lb-slow">Slowest Server</div><div class="mv" id="lb-slow" style="color:var(--red);font-size:18px">—</div><div class="ms" id="lb-slow-rt">—</div></div>
+    <div class="card"><div class="ml" id="lang-lb-fast">Fastest Server</div><div class="mv" id="lb-fast" style="color:var(--green);font-size:18px">—</div><div class="ms" id="lb-fast-rt">—</div></div>
+    <div class="card"><div class="ml" id="lang-lb-pred-lbl">Scale Prediction</div><div class="mv" id="lb-pred" style="color:var(--purple);font-size:11px">—</div></div>
+  </div>
+  <div class="g11 mt"><div class="card"><div class="ct" id="lang-ct-dist">Task Distribution</div><div class="cw"><canvas id="lbDistChart" aria-label="Task distribution chart"></canvas></div></div><div class="card"><div class="ct" id="lang-ct-rt">Response Time per Server (ms)</div><div class="cw"><canvas id="lbRtChart" aria-label="Response time chart"></canvas></div><div class="lg"><div class="li"><div class="ld" style="background:var(--cyan)"></div><span id="lang-lg-rt">Response Time ms</span></div><div class="li"><div class="ld" style="background:var(--red)"></div><span id="lang-lg-sla">SLA Limit 200ms</span></div></div></div></div>
+  <div class="card mt"><div class="ct"><span id="lang-ct-algo">Algorithm Comparison — Live</span> <span id="algo-winner" style="color:var(--green)"></span></div>
+    <table class="cmp-table"><thead><tr><th id="lang-tbl-algo">Algorithm</th><th id="lang-tbl-complex">Complexity</th><th id="lang-tbl-fair">Fairness</th><th id="lang-tbl-rt">Avg RT</th><th id="lang-tbl-vs">vs Best</th></tr></thead>
+    <tbody>
+      <tr id="row-rr"><td style="color:var(--cyan)" id="lang-algo-rr">Round Robin</td><td class="o1c">O(1)</td><td id="lang-fair-rr">High</td><td id="cmp-rr">—</td><td><div style="height:6px;border-radius:3px;background:var(--border);overflow:hidden"><div id="bar-rr" style="height:100%;background:var(--cyan);width:0%"></div></div></td></tr>
+      <tr id="row-lc"><td style="color:var(--green)" id="lang-algo-lc">Least Connections</td><td class="onc">O(n)</td><td id="lang-fair-lc">Excellent</td><td id="cmp-lc">—</td><td><div style="height:6px;border-radius:3px;background:var(--border);overflow:hidden"><div id="bar-lc" style="height:100%;background:var(--green);width:0%"></div></div></td></tr>
+      <tr id="row-wt"><td style="color:var(--orange)" id="lang-algo-wt">Weighted</td><td class="o1c">O(1)</td><td id="lang-fair-wt">Medium</td><td id="cmp-wt">—</td><td><div style="height:6px;border-radius:3px;background:var(--border);overflow:hidden"><div id="bar-wt" style="height:100%;background:var(--orange);width:0%"></div></div></td></tr>
+      <tr id="row-rnd"><td style="color:var(--purple)" id="lang-algo-rnd">Random</td><td class="o1c">O(1)</td><td id="lang-fair-rnd">Medium</td><td id="cmp-rnd">—</td><td><div style="height:6px;border-radius:3px;background:var(--border);overflow:hidden"><div id="bar-rnd" style="height:100%;background:var(--purple);width:0%"></div></div></td></tr>
+    </tbody>
+    </table>
+  </div>
+  <div class="sdg" id="lb-srvg" role="grid" aria-label="Server status"></div>
+</div>
+
+<div class="page" id="page-network" role="tabpanel">
+  <div><h2 style="font-size:16px;font-weight:800" id="lang-net-title">Network Latency Simulation</h2><p style="font-size:11px;color:var(--text2)" id="lang-net-sub">RTT affects response time — linked to load balancer | optimised</p></div>
+  <div class="g111">
+    <div class="card"><div class="ct" id="lang-ct-rtt">Average RTT</div><div class="bign"><div class="bigv" id="net-rtt" style="color:var(--cyan)">0</div><div class="bigu" id="lang-net-rtt-unit">ms RTT</div></div><div class="pflow" id="pflow" aria-label="Packet flow"></div></div>
+    <div class="card"><div class="ct" id="lang-ct-loss">Packet Loss</div><div class="bign"><div class="bigv" id="net-loss" style="color:var(--red)">0</div><div class="bigu" id="lang-net-loss-unit">% Lost</div></div></div>
+    <div class="card"><div class="ct" id="lang-ct-jitter">Jitter</div><div class="bign"><div class="bigv" id="net-jitter" style="color:var(--orange)">0</div><div class="bigu" id="lang-net-jitter-unit">ms variance</div></div></div>
+  </div>
+  <div class="g211 mt">
+    <div class="card"><div class="ct" id="lang-ct-lat">Latency over Time</div><div class="cw"><canvas id="netChart" aria-label="Latency chart"></canvas></div><div class="lg"><div class="li"><div class="ld" style="background:var(--cyan)"></div><span id="lang-lg-rtt">RTT ms</span></div><div class="li"><div class="ld" style="background:var(--red)"></div><span id="lang-lg-limit">150ms Limit</span></div><div class="li"><div class="ld" style="background:var(--orange)"></div><span id="lang-lg-effrt">Effective RT</span></div></div></div>
+    <div class="card"><div class="ct" id="lang-ct-netctrl">Network Controls</div>
+      <div><div class="sg"><div class="slbl"><span id="lang-ctrl-lat">Base Latency</span> <em id="ll-lat">20</em><span id="lang-ctrl-lat-unit">ms</span></div><input type="range" min="5" max="200" value="20" id="sl-lat" aria-label="Base latency"></div>
+      <div class="sg mt"><div class="slbl"><span id="lang-ctrl-jit">Jitter</span> <em id="ll-jit">10</em><span id="lang-ctrl-jit-unit">ms</span></div><input type="range" min="0" max="100" value="10" id="sl-jit" aria-label="Jitter"></div>
+      <div class="sg mt"><div class="slbl"><span id="lang-ctrl-loss">Packet Loss</span> <em id="ll-loss">1</em><span id="lang-ctrl-loss-unit">%</span></div><input type="range" min="0" max="30" value="1" id="sl-loss" aria-label="Packet loss"></div>
+      <div class="sg mt"><div class="slbl"><span id="lang-ctrl-nl">Network Load</span> <em id="ll-nl">40</em><span id="lang-ctrl-nl-unit">%</span></div><input type="range" min="0" max="100" value="40" id="sl-nl" aria-label="Network load"></div>
+      <div class="btn-row mt"><button class="br" onclick="netFail()" aria-label="Simulate network failure" id="lang-btn-fail">⚡ Failure</button><button class="bg2" onclick="netRecover()" aria-label="Recover network" id="lang-btn-recover">✓ Recover</button><button class="bw2" onclick="netCongestion()" aria-label="Simulate network congestion" id="lang-btn-cong">🔥 Congestion</button></div>
+      <div style="font-size:9px;font-family:var(--fm);color:var(--text3);margin-top:8px;background:var(--bg2);border-radius:6px;padding:8px;border:1px solid var(--border2)" id="lang-net-formula">RTT = Base + Jitter·N(0,1) + (Load/100)·35 | Effective RT = RTT + Service Time</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-theory" role="tabpanel">
+  <div style="margin-bottom:16px">
+    <h2 style="font-size:15px;font-weight:800;font-family:var(--fm);color:var(--text)" id="lang-th-title">// Mathematical Theory</h2>
+    <p style="font-size:10px;color:var(--text3);font-family:var(--fm);margin-top:3px" id="lang-th-sub">/* M/M/k · Random Service · EWMA · Auto-scaling · Validation · optimised */</p>
+  </div>
+
+  <!-- Block 1: M/M/k -->
+  <div style="margin-bottom:14px;background:var(--bg2);border:1px solid var(--border2);border-radius:9px;overflow:hidden">
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--surface);border-bottom:1px solid var(--border2)">
+      <span style="font-family:var(--fm);font-size:9px;color:var(--text3)">01</span>
+      <span class="ttag tag1" id="lang-th1-tag" style="margin:0">M/M/k Queue Model</span>
+      <span style="font-family:var(--fm);font-size:10px;font-weight:700;color:var(--text)" id="lang-th1-title">Utilization Rate ρ</span>
+    </div>
+    <div style="padding:14px;font-family:var(--fm);font-size:11px;line-height:2">
+      <div style="color:var(--text3);font-size:9px;margin-bottom:6px">// Core formula — determines system stability</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin-bottom:10px">
+        <span style="color:var(--text3)">const </span><span style="color:var(--cyan)">rho</span><span style="color:var(--text2)"> = </span><span style="color:var(--orange)">lambda</span><span style="color:var(--text2)"> / (</span><span style="color:var(--green)">k</span><span style="color:var(--text2)"> * </span><span style="color:var(--orange)">mu</span><span style="color:var(--text2)">);</span>
+        <br>
+        <span style="color:var(--text3)">// ρ = λ / (k · μ)</span>
+        <br><br>
+        <span style="color:var(--text3)">if </span><span style="color:var(--text2)">(rho &lt; </span><span style="color:var(--purple)">1.0</span><span style="color:var(--text2)">) </span><span style="color:var(--green)">→ stable</span><span style="color:var(--text3)">   // queue converges</span>
+        <br>
+        <span style="color:var(--text3)">if </span><span style="color:var(--text2)">(rho &gt;= </span><span style="color:var(--purple)">1.0</span><span style="color:var(--text2)">) </span><span style="color:var(--red)">→ unstable</span><span style="color:var(--text3)">  // queue → ∞</span>
+      </div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap">
+        <div><span style="color:var(--text3)">λ </span><span style="color:var(--text2)">= arrival rate (req/s)</span></div>
+        <div><span style="color:var(--text3)">μ </span><span style="color:var(--text2)">= service rate per server</span></div>
+        <div><span style="color:var(--text3)">k </span><span style="color:var(--text2)">= number of active servers</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Block 2: EWMA -->
+  <div style="margin-bottom:14px;background:var(--bg2);border:1px solid var(--border2);border-radius:9px;overflow:hidden">
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--surface);border-bottom:1px solid var(--border2)">
+      <span style="font-family:var(--fm);font-size:9px;color:var(--text3)">02</span>
+      <span class="ttag tag2" id="lang-th2-tag" style="margin:0">CPU EWMA Model</span>
+      <span style="font-family:var(--fm);font-size:10px;font-weight:700;color:var(--text)" id="lang-th2-title">Exponential Smoothing</span>
+    </div>
+    <div style="padding:14px;font-family:var(--fm);font-size:11px;line-height:2">
+      <div style="color:var(--text3);font-size:9px;margin-bottom:6px">// Smooths CPU spikes — prevents noisy auto-scaling decisions</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin-bottom:10px">
+        <span style="color:var(--text3)">const </span><span style="color:var(--cyan)">ALPHA</span><span style="color:var(--text2)"> = </span><span style="color:var(--purple)">0.3</span><span style="color:var(--text3)">;  // smoothing factor</span>
+        <br>
+        <span style="color:var(--text3)">const </span><span style="color:var(--cyan)">noise</span><span style="color:var(--text2)"> = </span><span style="color:var(--orange)">gaussianNoise</span><span style="color:var(--text2)">(</span><span style="color:var(--purple)">0</span><span style="color:var(--text2)">, </span><span style="color:var(--purple)">3.5</span><span style="color:var(--text2)">);</span>
+        <br><br>
+        <span style="color:var(--green)">cpu</span><span style="color:var(--text2)">[t] = ALPHA * </span><span style="color:var(--cyan)">rho</span><span style="color:var(--text2)">[t] * </span><span style="color:var(--purple)">100</span>
+        <br>
+        <span style="color:var(--text2) ;padding-left:60px">+ (</span><span style="color:var(--purple)">1</span><span style="color:var(--text2)"> - ALPHA) * </span><span style="color:var(--green)">cpu</span><span style="color:var(--text2)">[t-</span><span style="color:var(--purple)">1</span><span style="color:var(--text2)">]</span>
+        <br>
+        <span style="color:var(--text2);padding-left:60px">+ </span><span style="color:var(--cyan)">noise</span><span style="color:var(--text2)">;</span>
+      </div>
+      <div style="color:var(--text3);font-size:9px" id="lang-th2-body">α=0.3 weights recent ρ heavily while damping historical variance</div>
+    </div>
+  </div>
+
+  <!-- Block 3 & 4 side by side -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+
+    <!-- Block 3: Auto-scaling -->
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:9px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--surface);border-bottom:1px solid var(--border2)">
+        <span style="font-family:var(--fm);font-size:9px;color:var(--text3)">03</span>
+        <span class="ttag tag3" id="lang-th3-tag" style="margin:0">Auto-scaling Logic</span>
+        <span style="font-family:var(--fm);font-size:10px;font-weight:700;color:var(--text)" id="lang-th3-title">Composite Criterion</span>
+      </div>
+      <div style="padding:14px;font-family:var(--fm);font-size:10px;line-height:2">
+        <div style="color:var(--text3);font-size:9px;margin-bottom:6px">// Runs every tick with 5s cooldown</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px">
+          <span style="color:var(--text3)">if </span><span style="color:var(--text2)">(avgCpu &gt; </span><span style="color:var(--purple)">80</span><span style="color:var(--text3)"> ||</span>
+          <br>
+          <span style="padding-left:20px;color:var(--text2)">queue &gt; </span><span style="color:var(--purple)">15</span><span style="color:var(--text2)">) {</span>
+          <br>
+          <span style="padding-left:20px;color:var(--red)">k++;</span><span style="color:var(--text3)">  // scale-up</span>
+          <br>
+          <span style="color:var(--text2)">}</span>
+          <br><br>
+          <span style="color:var(--text3)">if </span><span style="color:var(--text2)">(avgCpu &lt; </span><span style="color:var(--purple)">30</span><span style="color:var(--text3)"> &&</span>
+          <br>
+          <span style="padding-left:20px;color:var(--text2)">queue &lt; </span><span style="color:var(--purple)">5</span><span style="color:var(--text2)">) {</span>
+          <br>
+          <span style="padding-left:20px;color:var(--green)">k--;</span><span style="color:var(--text3)">  // scale-down</span>
+          <br>
+          <span style="color:var(--text2)">}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Block 4: Validation -->
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:9px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--surface);border-bottom:1px solid var(--border2)">
+        <span style="font-family:var(--fm);font-size:9px;color:var(--text3)">04</span>
+        <span class="ttag tag4" id="lang-th4-tag" style="margin:0">Validation Metrics</span>
+        <span style="font-family:var(--fm);font-size:10px;font-weight:700;color:var(--text)" id="lang-th4-title">MAE and RMSE</span>
+      </div>
+      <div style="padding:14px;font-family:var(--fm);font-size:10px;line-height:2">
+        <div style="color:var(--text3);font-size:9px;margin-bottom:6px">// Compares simulated vs real CPU</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px">
+          <span style="color:var(--text3)">// Mean Absolute Error</span>
+          <br>
+          <span style="color:var(--cyan)">MAE</span><span style="color:var(--text2)"> = Σ|sim - real| / n</span>
+          <br><br>
+          <span style="color:var(--text3)">// Root Mean Square Error</span>
+          <br>
+          <span style="color:var(--cyan)">RMSE</span><span style="color:var(--text2)"> = √(Σ(sim-real)² / n)</span>
+          <br><br>
+          <span style="color:var(--text3)">// Lower = more accurate model</span>
+          <br>
+          <span style="color:var(--green)">target</span><span style="color:var(--text2)">: MAE &lt; </span><span style="color:var(--purple)">5.0</span><span style="color:var(--text3)">, RMSE &lt; </span><span style="color:var(--purple)">8.0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-report" role="tabpanel">
+  <div><h2 style="font-size:16px;font-weight:800" id="lang-rp-title-page">Session Report</h2><p style="font-size:11px;color:var(--text2)" id="lang-rp-sub">Auto-generated · Printable · optimised</p></div>
+  <div class="print-btns btn-row"><button class="bp" onclick="window.print()" aria-label="Print report" id="lang-btn-print">🖨️ Print / PDF</button><button onclick="genReport()" aria-label="Refresh report" id="lang-btn-refresh">↺ Refresh</button></div>
+  <div class="rpw" id="rp-content">
+    <div class="rph"><div class="rptitle" id="lang-rp-main-title">Smart Resource Monitoring Simulator</div><div class="rpsub" id="rp-date">Run the simulator then refresh</div></div>
+    <div class="rpsc"><div class="rpst" id="lang-rp-sum-title">Session Summary</div><div class="rp2c"><div class="rpst2"><div class="rpsl" id="lang-rp-dur">Duration</div><div class="rpsv" id="rp-dur">—</div></div><div class="rpst2"><div class="rpsl" id="lang-rp-sc">Scale Events</div><div class="rpsv" id="rp-sc">—</div></div><div class="rpst2"><div class="rpsl" id="lang-rp-pcpu">Peak CPU</div><div class="rpsv" id="rp-pcpu">—</div></div><div class="rpst2"><div class="rpsl" id="lang-rp-pq">Peak Queue</div><div class="rpsv" id="rp-pq">—</div></div><div class="rpst2"><div class="rpsl" id="lang-rp-cost">Total Cost</div><div class="rpsv" id="rp-cost">—</div></div><div class="rpst2"><div class="rpsl" id="lang-rp-cpt">Cost/Task</div><div class="rpsv" id="rp-cpt">—</div></div><div class="rpst2"><div class="rpsl" id="lang-rp-mae">MAE</div><div class="rpsv" id="rp-mae">—</div></div><div class="rpst2"><div class="rpsl" id="lang-rp-rmse">RMSE</div><div class="rpsv" id="rp-rmse">—</div></div><div class="rpst2"><div class="rpsl" id="lang-rp-sla">SLA Violations</div><div class="rpsv" id="rp-sla">—</div></div></div></div>
+    <div class="rpsc"><div class="rpst" id="lang-rp-log-title">Auto-scaling Event Log</div><div id="rp-log" style="background:var(--bg2);border:1px solid var(--border2);border-radius:7px;padding:10px;font-family:var(--fm);font-size:10px;max-height:120px;overflow-y:auto"></div></div>
+  </div>
+</div>
+
+<script>
+// Polyfill for requestAnimationFrame
+(function() {
+  var lastTime = 0;
+  var vendors = ['ms', 'moz', 'webkit', 'o'];
+  for(var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
+    window.requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
+    window.cancelAnimationFrame = window[vendors[x]+'CancelAnimationFrame'] || window[vendors[x]+'CancelRequestAnimationFrame'];
+  }
+  if (!window.requestAnimationFrame)
+    window.requestAnimationFrame = function(callback, element) {
+      var currTime = new Date().getTime();
+      var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+      var id = window.setTimeout(function() { callback(currTime + timeToCall); }, timeToCall);
+      lastTime = currTime + timeToCall;
+      return id;
+    };
+  if (!window.cancelAnimationFrame)
+    window.cancelAnimationFrame = function(id) { clearTimeout(id); };
+})();
+
+// Safe DOM utilities
+const G = (id) => { try { return document.getElementById(id); } catch(e) { return null; } };
+const S = (id, v) => { try { const el = G(id); if(el && v !== undefined) el.textContent = v; } catch(e) {} };
+const addLog = (msg, cls = '') => {
+  try {
+    const box = G('log');
+    if(!box) return;
+    const d = document.createElement('div');
+    d.className = 'll ' + cls;
+    d.textContent = `[${String(t).padStart(3,'0')}s] ${msg}`;
+    box.prepend(d);
+    while(box.children.length > 80) box.removeChild(box.lastChild);
+  } catch(e) {}
+};
+
+// Configuration
+let timer = null, netTimer = null, lbTimer = null, animationFrameId = null;
+let t = 0, k = 2, totalQueue = 0, cooldown = 0, scaleEvents = 0, peakCpu = 0, peakQueue = 0, totalCost = 0, tasksDone = 0, cpuSmoothed = 0, slaViolations = 0;
+const ALPHA = 0.3, COST_PER_SRV = 0.0083333333, MAX_CHART = 50, MAX_HISTORY = 1000, LBS = 10;
+let srvQueues = Array(LBS).fill(0), srvDown = Array(LBS).fill(false), srvRT = Array(LBS).fill(50), lbDist = Array(LBS).fill(0), lbHist = Array(LBS).fill(null).map(() => []);
+let algo = 'rr', lbRR = 0, currentRTT = 20;
+let cpuSimA = [], cpuRealA = [], ramA = [], queueA = [], tpArrA = [], tpServA = [], netLatA = [], effRtA = [], cpuWin = [], allSim = [], allReal = [], rhoHist = [];
+let algoRTsum = {rr:0,lc:0,wt:0,rnd:0}, algoRTn = {rr:0,lc:0,wt:0,rnd:0};
+
+// Safe array push with limit
+const pushLimited = (arr, val, limit = MAX_HISTORY) => { arr.push(val); if(arr.length > limit) arr.shift(); };
+const movAvg = (arr, n) => { if(!arr.length) return 0; const s = arr.slice(-n); return s.reduce((a,b)=>a+b,0)/s.length; };
+const padArray = (arr, maxLen = MAX_CHART) => { const r = new Array(maxLen).fill(null); arr.forEach((v,i) => r[r.length-arr.length+i] = v); return r; };
+const getParams = () => { try { return { lam:+G('sl-l')?.value || 4, mu:+G('sl-m')?.value || 5, ramBase:+G('sl-r')?.value || 30, mem:+G('sl-mem')?.value || 2 }; } catch(e) { return { lam:4, mu:5, ramBase:30, mem:2 }; } };
+const poisson = (lam) => { if(lam <= 0) return 0; let L = Math.exp(-Math.min(lam,700)), p = 1, k2 = 0; do { k2++; p *= Math.random(); } while(p > L); return k2 - 1; };
+const predictRho = (rho) => { rhoHist.push(rho); if(rhoHist.length > 10) rhoHist.shift(); if(rhoHist.length < 5) return '—'; const slope = (rhoHist[rhoHist.length-1] - rhoHist[rhoHist.length-5]) / 4; if(slope > 0.05) return `⬆ Rising +${(slope*100).toFixed(1)}%/s — Proactive Scale-up`; if(slope < -0.04) return `⬇ Falling — Scale-down`; return `✓ ρ Stable (${rho.toFixed(2)})`; };
+const bottleneck = (cpu, ram, q) => { if(cpu > 80) return ['CPU','Scale Up','var(--red)']; if(ram > 80) return ['Memory','Add Memory','var(--orange)']; if(q > 15 && cpu < 50) return ['I/O','Check I/O','var(--orange)']; return ['None','Healthy','var(--green)']; };
+const calcErr = () => { const n = Math.min(allSim.length, allReal.length); if(n < 2) return { mae:'—', rmse:'—' }; let sa = 0, ss = 0; for(let i = 0; i < n; i++) { const d = allSim[i] - allReal[i]; sa += Math.abs(d); ss += d*d; } return { mae:(sa/n).toFixed(2), rmse:Math.sqrt(ss/n).toFixed(2) }; };
+const updateSrvGrid = (kEff, rho, downCount) => { try { const g = G('srv-grid'); if(!g) return; g.innerHTML = ''; for(let i = 0; i < 10; i++) { const on = i < k, down = on && srvDown[i], active = on && !down; const load = active ? Math.min(rho*100 + (Math.random()-.5)*8, 100) : 0; const q = active ? (srvQueues[i] || 0) : 0; const cls = down ? 'sd' : (!on ? '' : (load > 80 ? 'so' : (load > 60 ? 'sh' : 'sa'))); const d = document.createElement('div'); d.className = 'sn ' + cls; if(down) { const badge = document.createElement('div'); badge.className = 'down-badge'; badge.textContent = 'FAIL'; d.appendChild(badge); } const si = document.createElement('div'); si.className = 'si'; si.textContent = down ? '💀' : (on ? '🖥️' : '⬜'); d.appendChild(si); const sl = document.createElement('div'); sl.className = 'sl'; sl.textContent = `Server ${i+1}`; d.appendChild(sl); const sv2 = document.createElement('div'); sv2.className = 'sv2'; sv2.style.color = active ? (load > 80 ? 'var(--red)' : (load > 60 ? 'var(--orange)' : 'var(--green)')) : 'var(--text3)'; sv2.textContent = active ? load.toFixed(0) + '%' : (down ? 'Failed' : 'Stopped'); d.appendChild(sv2); const sq = document.createElement('div'); sq.className = 'sq'; sq.textContent = active ? 'Queue:' + q : ''; d.appendChild(sq); g.appendChild(d); } } catch(e) {} };
+
+// Core tick function with performance optimization
+let lastFrameTime = 0, pendingUpdate = false;
+const requestChartUpdate = () => {
+  if(pendingUpdate) return;
+  pendingUpdate = true;
+  requestAnimationFrame(() => {
+    pendingUpdate = false;
+    try {
+      if(window.cpuChart) { window.cpuChart.data.datasets[0].data = padArray(cpuSimA); window.cpuChart.data.datasets[1].data = padArray(cpuRealA); window.cpuChart.update('none'); }
+      if(window.ramChart) { window.ramChart.data.datasets[0].data = padArray(ramA); window.ramChart.data.datasets[1].data = padArray(queueA.map(v => Math.min(v*5, 100))); window.ramChart.update('none'); }
+      if(window.tpChart) { window.tpChart.data.datasets[0].data = padArray(tpArrA); window.tpChart.data.datasets[1].data = padArray(tpServA); window.tpChart.update('none'); }
+      if(window.netChart) { window.netChart.data.datasets[0].data = padArray(netLatA); window.netChart.data.datasets[2].data = padArray(effRtA); window.netChart.update('none'); }
+    } catch(e) {}
+  });
+};
+
+function tick() {
+  try {
+    t++;
+    const { lam, mu, ramBase, mem } = getParams();
+    const arrivals = poisson(lam);
+    const activeSrvs = srvDown.filter(d => !d).length || 1;
+    const kEff = Math.min(k, activeSrvs);
+    const served = poisson(kEff * mu);
+    totalQueue = Math.max(0, totalQueue + arrivals - served);
+    tasksDone += Math.min(served, totalQueue + served);
+    let Q = totalQueue;
+    for(let i = 0; i < LBS; i++) { srvQueues[i] = (i < kEff && !srvDown[i]) ? Math.floor(Q / kEff) : 0; }
+    for(let i = 0; i < LBS; i++) { if(i < k && !srvDown[i] && Math.random() < 0.02) { srvDown[i] = true; addLog(`Server ${i+1} failed`, 'r'); } if(srvDown[i] && Math.random() < 0.03) { srvDown[i] = false; addLog(`Server ${i+1} recovered`, 'g'); } }
+    const downCount = srvDown.filter(d => d).length;
+    const rho = lam / (kEff * mu);
+    const eps = (Math.random() - 0.5) * 7;
+    cpuSmoothed = Math.min(100, Math.max(0, ALPHA * rho * 100 + (1 - ALPHA) * cpuSmoothed + eps));
+    const cpu = +cpuSmoothed.toFixed(1);
+    const cpuReal = Math.max(0, Math.min(cpu + (Math.random() - 0.5) * 12, 100));
+    const ram = Math.min(ramBase + totalQueue * mem + (Math.random() - 0.5) * 4, 100);
+    const wt = lam > 0 ? Math.max(0, (totalQueue / lam) * 1000) : 0;
+    if(wt > 200) slaViolations++;
+    totalCost += k * COST_PER_SRV;
+    cpuWin.push(cpu); if(cpuWin.length > 5) cpuWin.shift();
+    const avg = movAvg(cpuWin, 5);
+    pushLimited(cpuSimA, cpu); pushLimited(cpuRealA, cpuReal); pushLimited(ramA, ram); pushLimited(queueA, Math.min(totalQueue, 100)); pushLimited(tpArrA, arrivals); pushLimited(tpServA, served);
+    const serviceRT = mu > 0 ? 1000 / mu : 200; const effRT = serviceRT + currentRTT;
+    pushLimited(effRtA, +effRT.toFixed(0));
+    pushLimited(allSim, cpu); pushLimited(allReal, cpuReal);
+    if(cpu > peakCpu) peakCpu = cpu; if(totalQueue > peakQueue) peakQueue = totalQueue;
+    if(cooldown > 0) cooldown--;
+    if(cooldown === 0) { const pred = rhoHist.length >= 5 ? (rhoHist[rhoHist.length-1] - rhoHist[rhoHist.length-5]) / 4 : 0; if((avg > 80 || totalQueue > 15) && k < 10) { k++; scaleEvents++; addLog(`Scale-up → k=${k}`, 'w'); cooldown = 5; } else if((avg < 30 && totalQueue < 5) && k > 1) { k--; scaleEvents++; addLog(`Scale-down → k=${k}`, 'g'); cooldown = 5; } else if(pred > 0.05 && k < 10) { k++; scaleEvents++; addLog(`Proactive scale-up → k=${k}`, 'b'); cooldown = 5; } }
+    const [bn, bnSub, bnClr] = bottleneck(cpu, ram, totalQueue);
+    const err = calcErr();
+    S('m-cpu', cpu+'%'); S('m-ram', ram+'%'); S('m-queue', totalQueue); S('m-k', k); S('m-down-info', downCount + ' failed'); S('m-rho', rho.toFixed(2)); S('m-tp', served+'/s'); S('m-wt', wt.toFixed(0)+'ms'); S('m-cost', '$'+totalCost.toFixed(2)); S('m-done', tasksDone); S('m-sla', slaViolations); S('m-bn', bn); S('m-bn-sub', bnSub); if(G('m-bn')) G('m-bn').style.color = bnClr;
+    if(G('b-cpu')) G('b-cpu').style.cssText = `width:${cpu}%;background:${cpu>80?'var(--red)':cpu>60?'var(--orange)':'var(--blue)'}`;
+    if(G('b-ram')) G('b-ram').style.cssText = `width:${ram}%;background:${ram>80?'var(--red)':'var(--orange)'}`;
+    if(G('b-rho')) G('b-rho').style.cssText = `width:${Math.min(rho*100,100)}%;background:${rho>=1?'var(--red)':rho>.7?'var(--orange)':'var(--blue)'}`;
+    S('gt', 't = '+t+'s'); S('rholive', 'ρ='+rho.toFixed(2)); S('cost-badge', '$'+totalCost.toFixed(2)); S('cost-total', '$'+totalCost.toFixed(3)); S('cost-per-task', tasksDone>0 ? '$'+(totalCost/tasksDone).toFixed(4) : '—');
+    S('sn-rho', rho.toFixed(3)); const stEl = G('sn-stable'); if(stEl) { stEl.textContent = rho < 1 ? 'Yes ✓' : 'No ✗'; stEl.style.color = rho < 1 ? 'var(--green)' : 'var(--red)'; }
+    S('sn-avg', avg.toFixed(1)+'%'); S('sn-mae', err.mae); S('sn-rmse', err.rmse); S('sn-scales', scaleEvents); S('sn-pred', predictRho(rho)); if(G('lb-pred')) S('lb-pred', predictRho(rho));
+    const badge = G('sysbadge'); if(badge) { if(rho >= 1 || cpu > 85) { badge.className = 'badge bd'; badge.textContent = 'Overloaded'; } else if(cpu > 65 || totalQueue > 10) { badge.className = 'badge bw'; badge.textContent = 'High Load'; } else { badge.className = 'badge bs'; badge.textContent = 'Stable'; } }
+    S('srv-down-count', downCount > 0 ? downCount + ' failed' : '');
+    updateSrvGrid(kEff, rho, downCount);
+    requestChartUpdate();
+  } catch(e) { console.warn('Tick error:', e); }
+}
+
+function lbTick() { try { const { lam, mu } = getParams(); const tasks = poisson(lam); const activeSrvs = srvDown.map((d,i) => i < k && !d ? i : -1).filter(i => i >= 0); if(!activeSrvs.length) return; for(let taskIdx = 0; taskIdx < tasks; taskIdx++) { let target = 0; if(algo === 'rr') { target = activeSrvs[lbRR % activeSrvs.length]; lbRR++; } else if(algo === 'lc') { const loads = activeSrvs.map(i => srvQueues[i]); target = activeSrvs[loads.indexOf(Math.min(...loads))]; } else if(algo === 'rnd') { target = activeSrvs[Math.floor(Math.random() * activeSrvs.length)]; } else { const r = Math.random(); target = r < .4 ? activeSrvs[0] : (activeSrvs[1 + Math.floor(Math.random() * (activeSrvs.length - 1))] || activeSrvs[0]); } if(target !== undefined) { srvQueues[target] = Math.min((srvQueues[target] || 0) + 1, 50); lbDist[target]++; } } for(let i = 0; i < k; i++) { if(!srvDown[i]) srvQueues[i] = Math.max(0, (srvQueues[i] || 0) - Math.ceil(mu)); } for(let j = 0; j < LBS; j++) { lbHist[j].push(srvQueues[j] || 0); if(lbHist[j].length > 30) lbHist[j].shift(); } srvRT = Array(LBS).fill(0).map((_, idx) => { if(srvDown[idx] || idx >= k) return 0; const localRho = Math.min((srvQueues[idx] || 0) / 10, 0.97); const rt = (mu > 0 ? 1000 / mu : 200) / (1 - localRho) + currentRTT + (Math.random() - .5) * 10; return Math.max(1, Math.min(rt, 3000)); });
+    const activeRTs = srvRT.filter((r,i) => !srvDown[i] && i < k && r > 0);
+    if(activeRTs.length) { const avg = activeRTs.reduce((a,b)=>a+b,0) / activeRTs.length; algoRTsum[algo] += avg; algoRTn[algo]++; ['rr','lc','wt','rnd'].forEach(a => { const av = algoRTn[a] > 0 ? (algoRTsum[a]/algoRTn[a]).toFixed(0) + ' ms' : '—'; if(G('cmp-'+a)) S('cmp-'+a, av); }); const vals = Object.keys(algoRTn).map(a => algoRTn[a] > 0 ? algoRTsum[a]/algoRTn[a] : 0); const maxRT = Math.max(...vals) || 1; ['rr','lc','wt','rnd'].forEach(a => { const v = algoRTn[a] > 0 ? algoRTsum[a]/algoRTn[a] : 0; const bar = G('bar-'+a); if(bar) bar.style.width = (v / maxRT * 100).toFixed(0) + '%'; }); const minRT = Math.min(...vals.filter(v => v > 0)); const winner = ['rr','lc','wt','rnd'][vals.indexOf(minRT)]; if(G('algo-winner') && algoRTn[winner] > 0) S('algo-winner', '✓ Best: '+winner.toUpperCase()); }
+    if(window.lbDistChart) { window.lbDistChart.data.datasets[0].data = [...lbDist]; window.lbDistChart.update('none'); }
+    if(window.lbRtChart) { window.lbRtChart.data.datasets[0].data = srvRT.map(v => +v.toFixed(0)); window.lbRtChart.update('none'); }
+    const liveRTs = srvRT.filter((r,i) => !srvDown[i] && i < k && r > 0);
+    if(liveRTs.length) { const avgRT = (liveRTs.reduce((a,b)=>a+b,0) / liveRTs.length).toFixed(0); const maxIdx = srvRT.indexOf(Math.max(...liveRTs)); const minIdx = srvRT.indexOf(Math.min(...liveRTs)); S('lb-avgrt', avgRT + ' ms'); S('lb-slow', 'Server ' + (maxIdx+1)); S('lb-slow-rt', srvRT[maxIdx].toFixed(0) + ' ms RT'); S('lb-fast', 'Server ' + (minIdx+1)); S('lb-fast-rt', srvRT[minIdx].toFixed(0) + ' ms RT'); }
+    const g = G('lb-srvg'); if(g) { g.innerHTML = ''; for(let i = 0; i < LBS; i++) { const down = srvDown[i] || (i >= k); const load = down ? 0 : Math.min((srvQueues[i] || 0) * 10, 100); const rt = srvRT[i] || 0; const d = document.createElement('div'); d.className = `sdc${down && i < k ? ' sd2' : (load > 80 ? ' so2' : (load > 60 ? ' sh2' : ''))}`; if(i < k && srvDown[i]) { const tag = document.createElement('div'); tag.className = 'down-tag'; tag.textContent = 'Failed'; d.appendChild(tag); } const sdtop = document.createElement('div'); sdtop.className = 'sdtop'; sdtop.innerHTML = `<span>Server ${i+1}${i >= k ? ' (Stopped)' : ''}</span><span style="color:${down ? 'var(--text3)' : (load > 80 ? 'var(--red)' : (load > 60 ? 'var(--orange)' : 'var(--green)'))}">${down ? 'Stopped' : load.toFixed(0)+'%'}</span>`; d.appendChild(sdtop); const sdnum = document.createElement('div'); sdnum.className = 'sdnum'; sdnum.style.color = down ? 'var(--text3)' : (rt > 200 ? 'var(--red)' : (rt > 100 ? 'var(--orange)' : 'var(--cyan)')); sdnum.innerHTML = `${down ? '—' : lbDist[i]}<span style="font-size:10px;color:var(--text3)"> tasks</span>`; d.appendChild(sdnum); const sdbw = document.createElement('div'); sdbw.className = 'sdbw'; const sdbar = document.createElement('div'); sdbar.className = 'sdbar'; sdbar.style.width = `${load}%`; sdbar.style.background = load > 80 ? 'var(--red)' : (load > 60 ? 'var(--orange)' : 'var(--green)'); sdbw.appendChild(sdbar); d.appendChild(sdbw); const sdsub = document.createElement('div'); sdsub.className = 'sdsub'; sdsub.innerHTML = `RT: <b style="color:${rt > 200 ? 'var(--red)' : (rt > 100 ? 'var(--orange)' : 'var(--green)')}">${down ? '—' : rt.toFixed(0)+' ms'}</b> | Queue:${srvQueues[i] || 0}`; d.appendChild(sdsub); g.appendChild(d); } } } catch(e) {} }
+function netTick() { try { const base = +G('sl-lat')?.value || 20, jit = +G('sl-jit')?.value || 10, loss = +G('sl-loss')?.value || 1, nl = +G('sl-nl')?.value || 40, noise = (Math.random() - .5) * 2; currentRTT = Math.max(1, base + jit * noise + nl / 100 * 35); const pktLoss = Math.min(100, (loss/100 + Math.pow(nl/100, 2) * .1) * 100); const jitterVal = Math.abs(jit * noise + (Math.random() - .5) * 5); pushLimited(netLatA, +currentRTT.toFixed(1)); S('net-rtt', currentRTT.toFixed(0)); S('net-loss', pktLoss.toFixed(1)); S('net-jitter', jitterVal.toFixed(1)); const flow = G('pflow'); if(flow && flow.children.length < 8) { const p = document.createElement('div'); p.className = `pkt ${Math.random() < loss/100 ? 'drop' : (currentRTT > 100 ? 'slow' : 'ok')}`; p.style.cssText = `top:${8+Math.random()*30}px;animation:flow ${1+Math.random()*1.5}s linear ${Math.random()*.3}s 1 forwards`; flow.appendChild(p); setTimeout(() => { try { if(p.parentNode) p.remove(); } catch(e) {} }, 2500); } requestChartUpdate(); } catch(e) {} }
+function startSim() { if(timer) return; addLog('Simulation started — M/M/k model active (optimised v4.0)', 'g'); timer = setInterval(tick, 1000); if(!lbTimer) lbTimer = setInterval(lbTick, 1000); if(!netTimer) netTimer = setInterval(netTick, 1000); }
+function stopSim() { if(timer) clearInterval(timer); if(lbTimer) clearInterval(lbTimer); if(netTimer) clearInterval(netTimer); timer = lbTimer = netTimer = null; addLog('Paused'); }
+function resetSim() { try { stopSim(); t = 0; k = 2; totalQueue = 0; cooldown = 0; scaleEvents = 0; peakCpu = 0; peakQueue = 0; totalCost = 0; tasksDone = 0; cpuSmoothed = 0; slaViolations = 0; srvQueues.fill(0); srvDown.fill(false); srvRT.fill(50); lbDist.fill(0); lbHist.forEach(a => a.length = 0); lbRR = 0; cpuSimA.length = 0; cpuRealA.length = 0; ramA.length = 0; queueA.length = 0; tpArrA.length = 0; tpServA.length = 0; netLatA.length = 0; effRtA.length = 0; cpuWin.length = 0; allSim.length = 0; allReal.length = 0; rhoHist.length = 0; Object.keys(algoRTsum).forEach(k => { algoRTsum[k] = 0; algoRTn[k] = 0; }); S('m-cpu', '0%'); S('m-ram', '0%'); S('m-queue', '0'); S('m-rho', '0.00'); S('m-tp', '0'); S('m-k', '2'); S('m-sla', '0'); S('gt', 't = 0s'); S('sn-scales', '0'); S('cost-total', '$0.000'); S('m-cost', '$0.00'); S('m-done', '0'); if(G('log')) G('log').innerHTML = ''; if(G('lb-srvg')) G('lb-srvg').innerHTML = ''; if(G('sysbadge')) { G('sysbadge').className = 'badge bs'; G('sysbadge').textContent = 'Stable'; } ['b-cpu','b-ram','b-rho'].forEach(id => { if(G(id)) G(id).style.width = '0%'; }); addLog('System reset — Ready (optimised)', 'g'); if(window.cpuChart) { window.cpuChart.data.datasets[0].data = Array(MAX_CHART).fill(null); window.cpuChart.data.datasets[1].data = Array(MAX_CHART).fill(null); window.cpuChart.update('none'); } if(window.ramChart) { window.ramChart.data.datasets[0].data = Array(MAX_CHART).fill(null); window.ramChart.data.datasets[1].data = Array(MAX_CHART).fill(null); window.ramChart.update('none'); } if(window.tpChart) { window.tpChart.data.datasets[0].data = Array(MAX_CHART).fill(null); window.tpChart.data.datasets[1].data = Array(MAX_CHART).fill(null); window.tpChart.update('none'); } if(window.netChart) { window.netChart.data.datasets[0].data = Array(MAX_CHART).fill(null); window.netChart.data.datasets[2].data = Array(MAX_CHART).fill(null); window.netChart.update('none'); } const g = G('srv-grid'); if(g) { g.innerHTML = ''; for(let i = 0; i < 10; i++) { const d = document.createElement('div'); d.className = 'sn'; const si = document.createElement('div'); si.className = 'si'; si.textContent = i < 2 ? '🖥️' : '⬜'; d.appendChild(si); const sl = document.createElement('div'); sl.className = 'sl'; sl.textContent = `Server ${i+1}`; d.appendChild(sl); const sv2 = document.createElement('div'); sv2.className = 'sv2'; sv2.textContent = i < 2 ? '0%' : 'Stopped'; d.appendChild(sv2); const sq = document.createElement('div'); sq.className = 'sq'; sq.textContent = i < 2 ? 'Queue:0' : ''; d.appendChild(sq); g.appendChild(d); } } } catch(e) {} }
+function stressTest() { try { const sl = G('sl-l'); if(sl) { sl.value = 18; const ll = G('ll'); if(ll) ll.textContent = '18'; } addLog('⚡ Stress: λ=18', 'r'); if(!timer) startSim(); } catch(e) {} }
+function ddosAttack() { try { const sl = G('sl-l'); if(sl) { sl.value = 25; const ll = G('ll'); if(ll) ll.textContent = '25'; } addLog('💥 DDoS Attack: λ=25', 'r'); if(!timer) startSim(); } catch(e) {} }
+function scHigh() { try { const sl = G('sl-l'); if(sl) sl.value = 14; const sm = G('sl-m'); if(sm) sm.value = 5; const ll = G('ll'); if(ll) ll.textContent = '14'; const lm = G('lm'); if(lm) lm.textContent = '5'; addLog('High Load (λ=14,μ=5)', 'w'); if(!timer) startSim(); } catch(e) {} }
+function scLow() { try { const sl = G('sl-l'); if(sl) sl.value = 2; const sm = G('sl-m'); if(sm) sm.value = 8; const ll = G('ll'); if(ll) ll.textContent = '2'; const lm = G('lm'); if(lm) lm.textContent = '8'; addLog('Low Load (λ=2,μ=8)', 'g'); if(!timer) startSim(); } catch(e) {} }
+function manualScaleUp() { if(k >= 10) { addLog('Max servers reached (10)', 'w'); return; } k++; scaleEvents++; addLog(`Manual scale-up → k=${k}`, 'b'); }
+function manualScaleDown() { if(k <= 1) { addLog('Min servers reached (1)', 'w'); return; } k--; scaleEvents++; addLog(`Manual scale-down → k=${k}`, 'b'); }
+function setAlgo(a, btn) { algo = a; lbRR = 0; try { document.querySelectorAll('.abn').forEach(b => b.classList.remove('active')); if(btn) btn.classList.add('active'); } catch(e) {} addLog('Load Balancer: '+a+' selected', 'b'); }
+function genReport() { try { const { lam, mu } = getParams(); const kEff = Math.min(k, srvDown.filter(d => !d).length || 1); const rho = lam / (kEff * mu); const err = calcErr(); S('rp-date', 'Session Report · '+new Date().toLocaleString('en-US')); S('rp-dur', t+'s'); S('rp-sc', scaleEvents); S('rp-pcpu', peakCpu.toFixed(1)+'%'); S('rp-pq', peakQueue); S('rp-cost', '$'+totalCost.toFixed(3)); S('rp-cpt', tasksDone > 0 ? '$'+(totalCost/tasksDone).toFixed(4) : '—'); S('rp-mae', err.mae); S('rp-rmse', err.rmse); S('rp-sla', slaViolations); const rlog = G('rp-log'); if(rlog) { const src = G('log'); rlog.innerHTML = src ? src.innerHTML : '<span style="color:var(--text3)">No events yet — run the simulator first.</span>'; } } catch(e) {} }
+function showPage(id) { try { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); const p = G('page-'+id); if(p) p.classList.add('active'); document.querySelectorAll('.ntb').forEach((b, i) => { b.classList.toggle('active', ['dashboard','loadbalancer','network','theory','report'][i] === id); }); if(id === 'report') genReport(); } catch(e) {} }
+function detechHW() { try { const c = navigator.hardwareConcurrency || 'N/A'; S('hw-cores', c + (c !== 'N/A' ? ' cores' : '')); S('hw-ram', navigator.deviceMemory ? navigator.deviceMemory + ' GB' : 'N/A'); const conn = navigator.connection; S('hw-net', conn ? (conn.effectiveType || '?').toUpperCase() : 'N/A'); const ua = navigator.userAgent; S('hw-plat', ua.includes('Win') ? 'Windows' : (ua.includes('Mac') ? 'Mac' : 'Linux/Other')); } catch(e) {} }
+function initCharts() { try { const gc = 'rgba(255,255,255,0.04)', tc = '#4a6070'; const yA = (cb) => ({ ticks: { color: tc, font: { size: 9 }, callback: cb }, grid: { color: gc } }); const base = { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } } }; window.cpuChart = new Chart(G('cpuChart'), { type: 'line', data: { labels: new Array(MAX_CHART).fill(''), datasets: [{ data: Array(MAX_CHART).fill(null), borderColor: '#3b9eff', borderWidth: 2, pointRadius: 0, tension: .4, fill: false }, { data: Array(MAX_CHART).fill(null), borderColor: '#00e47c', borderWidth: 2, borderDash: [5,4], pointRadius: 0, tension: .4, fill: false }, { data: new Array(MAX_CHART).fill(80), borderColor: '#ff4560', borderWidth: 1, borderDash: [3,5], pointRadius: 0, fill: false }] }, options: { ...base, scales: { x: { display: false }, y: { ...yA(v => v + '%'), min: 0, max: 100 } } } }); window.ramChart = new Chart(G('ramChart'), { type: 'line', data: { labels: new Array(MAX_CHART).fill(''), datasets: [{ data: Array(MAX_CHART).fill(null), borderColor: '#ffb020', borderWidth: 2, pointRadius: 0, tension: .4, fill: false }, { data: Array(MAX_CHART).fill(null), borderColor: '#a78bfa', borderWidth: 2, borderDash: [4,3], pointRadius: 0, tension: .4, fill: false }] }, options: { ...base, scales: { x: { display: false }, y: { ...yA(v => v + '%'), min: 0, max: 100 } } } }); window.tpChart = new Chart(G('tpChart'), { type: 'line', data: { labels: new Array(MAX_CHART).fill(''), datasets: [{ data: Array(MAX_CHART).fill(null), borderColor: '#00d4ff', borderWidth: 2, pointRadius: 0, tension: .4, fill: 'origin', backgroundColor: 'rgba(0,212,255,.04)' }, { data: Array(MAX_CHART).fill(null), borderColor: '#00e47c', borderWidth: 2, pointRadius: 0, tension: .4, fill: false }] }, options: { ...base, scales: { x: { display: false }, y: { ...yA(v => v), min: 0 } } } }); window.lbDistChart = new Chart(G('lbDistChart'), { type: 'bar', data: { labels: Array.from({ length: LBS }, (_, i) => 'S' + (i+1)), datasets: [{ data: [0,0,0,0,0,0,0,0,0,0], backgroundColor: ['#3b9eff','#00e47c','#ffb020','#a78bfa','#00d4ff','#f472b6','#ff4560','#3b9eff','#00e47c','#ffb020'], borderRadius: 5, borderSkipped: false }] }, options: { ...base, scales: { x: { ticks: { color: tc, font: { size: 10 } } }, y: { ...yA(v => v) } } } }); window.lbRtChart = new Chart(G('lbRtChart'), { type: 'bar', data: { labels: Array.from({ length: LBS }, (_, i) => 'S' + (i+1)), datasets: [{ label: 'RT', data: [50,50,50,50,50,50,50,50,50,50], backgroundColor: '#00d4ff', borderRadius: 5, borderSkipped: false }, { label: 'SLA', data: [200,200,200,200,200,200,200,200,200,200], type: 'line', borderColor: '#ff4560', borderWidth: 1.5, borderDash: [4,3], pointRadius: 0, fill: false }] }, options: { ...base, scales: { x: { ticks: { color: tc, font: { size: 10 } } }, y: { ...yA(v => v + 'ms'), min: 0 } } } }); window.netChart = new Chart(G('netChart'), { type: 'line', data: { labels: new Array(MAX_CHART).fill(''), datasets: [{ data: Array(MAX_CHART).fill(null), borderColor: '#00d4ff', borderWidth: 2, pointRadius: 0, tension: .4, fill: 'origin', backgroundColor: 'rgba(0,212,255,.04)' }, { data: new Array(MAX_CHART).fill(150), borderColor: '#ff4560', borderWidth: 1, borderDash: [3,5], pointRadius: 0, fill: false }, { data: Array(MAX_CHART).fill(null), borderColor: '#ffb020', borderWidth: 1.5, borderDash: [2,3], pointRadius: 0, tension: .4, fill: false }] }, options: { ...base, scales: { x: { display: false }, y: { ...yA(v => v + 'ms'), min: 0 } } } }); } catch(e) { console.warn('Chart init error:', e); } }
+initCharts(); detechHW(); addLog('Simulator loaded — Final optimised release (v4.0) ready', 'g');
+
+// ===================== LANGUAGE SYSTEM =====================
+const TRANSLATIONS = {
+  en: {
+    // Nav
+    'nav-title': '⚡ SRM Simulator · M/M/k · Final Release',
+    'nav-dashboard': '📊 Dashboard',
+    'nav-loadbalancer': '⚖️ Load Balancer',
+    'nav-network': '🌐 Network',
+    'nav-theory': '📚 Theory',
+    'nav-report': '📄 Report',
+    // Hardware banner
+    'hw-label': '🖥 Real Hardware',
+    'hw-cores-label': 'Cores:',
+    'hw-ram-label': 'Memory:',
+    'hw-net-label': 'Network:',
+    'hw-plat-label': 'Platform:',
+    'hw-note': 'Simulated CPU ratio using EWMA + noise | optimised v4.0',
+    // Disclaimers
+    'disc-service': '⚠ Service: Random process using Poisson(k·μ) — true M/M/k model.',
+    'disc-cpu': '⚠ CPU: EWMA(ρ) + Gaussian noise ε~N(0,σ).',
+    'disc-network': '⚠ Network: Simplified congestion model.',
+    'disc-auto': '⚠ Auto-scaling: Composite criterion (CPU + queue).',
+    // Metric cards
+    'mc-cpu-label': 'CPU (EWMA)', 'mc-cpu-sub': 'ρ = λ/kμ',
+    'mc-ram-label': 'RAM Memory', 'mc-ram-sub': 'Base + Queue',
+    'mc-queue-label': 'Queue', 'mc-queue-sub': 'Total Requests',
+    'mc-k-label': 'Servers (k)',
+    'mc-rho-label': 'Utilization ρ', 'mc-rho-sub': 'Stable < 1.0',
+    'mc-tp-label': 'Throughput', 'mc-tp-sub': 'tasks/s',
+    'mc-wt-label': 'Avg Wait', 'mc-wt-sub': "Little's Law",
+    'mc-cost-label': 'Cost', 'mc-cost-sub': '$0.0083/server/s ($0.5/min)',
+    'mc-sla-label': 'SLA Violations', 'mc-sla-sub': 'Wait > 200ms',
+    // Chart titles
+    'ct-cpu': 'CPU Utilization — EWMA Model',
+    'ct-srv': 'Server Nodes',
+    'ct-cost-total': 'Total Cost', 'ct-cost-task': 'Cost/Task', 'ct-tasks': 'Tasks Completed', 'ct-bn': 'Bottleneck',
+    'ct-cost-sub': 'k × $0.0083 × t', 'ct-cost-task-sub': 'Efficiency Indicator', 'ct-tasks-sub': 'Total', 'ct-bn-sub-val': 'Healthy',
+    'ct-mem': 'Memory and Queue',
+    'ct-tp': 'Throughput vs Arrival',
+    // Chart legends
+    'lg-sim': 'Simulated (EWMA)', 'lg-real': 'Real (Estimated)', 'lg-thresh': '80% Threshold',
+    'lg-ram': 'RAM %', 'lg-queue': 'Queue ×5',
+    'lg-arr': 'Arrival λ', 'lg-svc': 'Service Poisson(kμ)',
+    // System snapshot
+    'ct-log': 'Decision Log',
+    'ct-snap': 'System Snapshot',
+    'snap-rho': 'ρ = λ/(kμ)', 'snap-stable': 'Stable (ρ<1)', 'snap-avg': 'CPU Avg 5s',
+    'snap-mae': 'MAE Sim/Real', 'snap-rmse': 'RMSE', 'snap-scales': 'Scale Events', 'snap-pred': 'Predictive',
+    'form-title': 'Core Formulas', 'form-util': 'ρ = λ / (k·μ)', 'form-util-sub': '— Utilization rate',
+    'form-stable': 'ρ < 1', 'form-stable-ok': '→ Stable |', 'form-unstable': 'ρ ≥ 1', 'form-unstable-bad': '→ Queue → ∞',
+    'form-little': 'W = L / λ', 'form-little-sub': "— Little's Law",
+    'form-ewma': 'EWMA: CPU(t) = α·ρ + (1−α)·CPU(t−1)',
+    // Controls
+    'ct-controls': 'Controls',
+    'ctrl-arr': 'Arrival Rate λ', 'ctrl-arr-unit': '/s',
+    'ctrl-svc': 'Service Rate μ', 'ctrl-svc-unit': '/s',
+    'ctrl-ram': 'Base RAM', 'ctrl-ram-unit': '%',
+    'ctrl-mem': 'RAM/Task', 'ctrl-mem-unit': '%',
+    'btn-start': '▶ Start', 'btn-pause': '⏸ Pause', 'btn-reset': '↺ Reset',
+    'btn-stress': '⚡ Stress (λ=18)', 'btn-ddos': '💥 DDoS Attack (λ=25)',
+    'btn-high': '📈 High Load (λ=14)', 'btn-low': '📉 Low Load (λ=2)',
+    'btn-add': '➕ Add Server', 'btn-remove': '➖ Remove Server',
+    'auto-info': '<span style="color:var(--orange)">Auto-scaling:</span> Scale-up: Avg CPU > 80% or Queue > 15 | Scale-down: Avg CPU < 30% and Queue < 5 | Cooldown: 5s',
+    // Load Balancer
+    'lb-title': 'Load Balancer Engine',
+    'lb-sub': 'Queues · Response Time · Fault Handling · Algorithm Comparison',
+    'lb-avg': 'Avg Response Time', 'lb-slow': 'Slowest Server', 'lb-fast': 'Fastest Server', 'lb-pred-lbl': 'Scale Prediction',
+    'ct-dist': 'Task Distribution', 'ct-rt': 'Response Time per Server (ms)',
+    'lg-rt': 'Response Time ms', 'lg-sla': 'SLA Limit 200ms',
+    'ct-algo': 'Algorithm Comparison — Live',
+    'tbl-algo': 'Algorithm', 'tbl-complex': 'Complexity', 'tbl-fair': 'Fairness', 'tbl-rt': 'Avg RT', 'tbl-vs': 'vs Best',
+    'algo-rr': 'Round Robin', 'algo-lc': 'Least Connections', 'algo-wt': 'Weighted', 'algo-rnd': 'Random',
+    'fair-rr': 'High', 'fair-lc': 'Excellent', 'fair-wt': 'Medium', 'fair-rnd': 'Medium',
+    'btn-rr': 'Round Robin — O(1)', 'btn-lc': 'Least Connections — O(n)', 'btn-wt': 'Weighted — O(1)', 'btn-rnd': 'Random — O(1)',
+    // Network
+    'net-title': 'Network Latency Simulation',
+    'net-sub': 'RTT affects response time — linked to load balancer | optimised',
+    'ct-rtt': 'Average RTT', 'net-rtt-unit': 'ms RTT',
+    'ct-loss': 'Packet Loss', 'net-loss-unit': '% Lost',
+    'ct-jitter': 'Jitter', 'net-jitter-unit': 'ms variance',
+    'ct-lat': 'Latency over Time',
+    'lg-rtt': 'RTT ms', 'lg-limit': '150ms Limit', 'lg-effrt': 'Effective RT',
+    'ct-netctrl': 'Network Controls',
+    'ctrl-lat': 'Base Latency', 'ctrl-lat-unit': 'ms',
+    'ctrl-jit': 'Jitter', 'ctrl-jit-unit': 'ms',
+    'ctrl-loss': 'Packet Loss', 'ctrl-loss-unit': '%',
+    'ctrl-nl': 'Network Load', 'ctrl-nl-unit': '%',
+    'btn-fail': '⚡ Failure', 'btn-recover': '✓ Recover', 'btn-cong': '🔥 Congestion',
+    'net-formula': 'RTT = Base + Jitter·N(0,1) + (Load/100)·35 | Effective RT = RTT + Service Time',
+    // Theory
+    'th-title': '// Mathematical Theory',
+    'th-sub': '/* M/M/k · Random Service · EWMA · Auto-scaling · Validation · optimised */',
+    'th1-tag': 'M/M/k Queue Model', 'th1-title': 'Utilization Rate ρ',
+    'th1-body': 'ρ = λ/(k·μ). ρ < 1 → Stable, ρ ≥ 1 → Unstable.',
+    'th2-tag': 'CPU EWMA Model', 'th2-title': 'Exponential Smoothing',
+    'th2-body': 'CPU(t) = α·ρ(t) + (1−α)·CPU(t−1) + ε, α=0.3, ε~N(0,3.5%)',
+    'th3-tag': 'Auto-scaling Logic', 'th3-title': 'Composite Criterion',
+    'th3-body': 'Scale-up: Avg CPU > 80% or Queue > 15 | Scale-down: Avg CPU < 30% and Queue < 5',
+    'th4-tag': 'Validation Metrics', 'th4-title': 'MAE and RMSE',
+    'th4-body': 'MAE = (1/n)·Σ|y_sim−y_real|, RMSE = √[(1/n)·Σ(y_sim−y_real)²]',
+    // Report
+    'rp-title-page': 'Session Report',
+    'rp-sub': 'Auto-generated · Printable · optimised',
+    'btn-print': '🖨️ Print / PDF', 'btn-refresh': '↺ Refresh',
+    'rp-main-title': 'Smart Resource Monitoring Simulator',
+    'rp-sum-title': 'Session Summary',
+    'rp-dur': 'Duration', 'rp-sc': 'Scale Events', 'rp-pcpu': 'Peak CPU',
+    'rp-pq': 'Peak Queue', 'rp-cost': 'Total Cost', 'rp-cpt': 'Cost/Task',
+    'rp-mae': 'MAE', 'rp-rmse': 'RMSE', 'rp-sla': 'SLA Violations',
+    'rp-log-title': 'Auto-scaling Event Log',
+    // Badge
+    'badge-stable': 'Stable', 'badge-high': 'High Load', 'badge-over': 'Overloaded',
+    // Lang button
+    'lang-btn': '🌐 AR',
+  },
+  ar: {
+    'nav-title': '⚡ محاكي SRM · نموذج M/M/k · الإصدار النهائي',
+    'nav-dashboard': '📊 لوحة التحكم',
+    'nav-loadbalancer': '⚖️ موازن الحمل',
+    'nav-network': '🌐 الشبكة',
+    'nav-theory': '📚 النظرية',
+    'nav-report': '📄 التقرير',
+    'hw-label': '🖥 الأجهزة الحقيقية',
+    'hw-cores-label': 'الأنوية:',
+    'hw-ram-label': 'الذاكرة:',
+    'hw-net-label': 'الشبكة:',
+    'hw-plat-label': 'المنصة:',
+    'hw-note': 'نسبة CPU محاكاة باستخدام EWMA + ضوضاء | الإصدار المحسّن v4.0',
+    'disc-service': '⚠ الخدمة: عملية عشوائية باستخدام Poisson(k·μ) — نموذج M/M/k حقيقي.',
+    'disc-cpu': '⚠ المعالج: EWMA(ρ) + ضوضاء غاوسية ε~N(0,σ).',
+    'disc-network': '⚠ الشبكة: نموذج ازدحام مبسّط.',
+    'disc-auto': '⚠ التوسع التلقائي: معيار مركّب (المعالج + قائمة الانتظار).',
+    'mc-cpu-label': 'المعالج (EWMA)', 'mc-cpu-sub': 'ρ = λ/kμ',
+    'mc-ram-label': 'ذاكرة RAM', 'mc-ram-sub': 'أساسي + قائمة الانتظار',
+    'mc-queue-label': 'قائمة الانتظار', 'mc-queue-sub': 'إجمالي الطلبات',
+    'mc-k-label': 'الخوادم (k)',
+    'mc-rho-label': 'معدل الاستخدام ρ', 'mc-rho-sub': 'مستقر < 1.0',
+    'mc-tp-label': 'الإنتاجية', 'mc-tp-sub': 'مهمة/ثانية',
+    'mc-wt-label': 'متوسط الانتظار', 'mc-wt-sub': 'قانون ليتل',
+    'mc-cost-label': 'التكلفة', 'mc-cost-sub': '0.0083$/خادم/ثانية (0.5$/دقيقة)',
+    'mc-sla-label': 'انتهاكات SLA', 'mc-sla-sub': 'انتظار > 200ms',
+    'ct-cpu': 'استخدام المعالج — نموذج EWMA',
+    'ct-srv': 'عقد الخوادم',
+    'ct-cost-total': 'التكلفة الإجمالية', 'ct-cost-task': 'التكلفة/مهمة', 'ct-tasks': 'المهام المنجزة', 'ct-bn': 'نقطة الاختناق',
+    'ct-cost-sub': 'k × 0.0083$ × t', 'ct-cost-task-sub': 'مؤشر الكفاءة', 'ct-tasks-sub': 'الإجمالي', 'ct-bn-sub-val': 'سليم',
+    'ct-mem': 'الذاكرة وقائمة الانتظار',
+    'ct-tp': 'الإنتاجية مقابل الوصول',
+    'lg-sim': 'محاكى (EWMA)', 'lg-real': 'حقيقي (مقدّر)', 'lg-thresh': 'عتبة 80%',
+    'lg-ram': 'RAM %', 'lg-queue': 'قائمة الانتظار ×5',
+    'lg-arr': 'معدل الوصول λ', 'lg-svc': 'خدمة Poisson(kμ)',
+    'ct-log': 'سجل القرارات',
+    'ct-snap': 'لقطة النظام',
+    'snap-rho': 'ρ = λ/(kμ)', 'snap-stable': 'مستقر (ρ<1)', 'snap-avg': 'متوسط المعالج 5 ثوانٍ',
+    'snap-mae': 'MAE محاكى/حقيقي', 'snap-rmse': 'RMSE', 'snap-scales': 'أحداث التوسع', 'snap-pred': 'تنبؤي',
+    'form-title': 'المعادلات الأساسية', 'form-util': 'ρ = λ / (k·μ)', 'form-util-sub': '— معدل الاستخدام',
+    'form-stable': 'ρ < 1', 'form-stable-ok': '→ مستقر |', 'form-unstable': 'ρ ≥ 1', 'form-unstable-bad': '→ قائمة انتظار → ∞',
+    'form-little': 'W = L / λ', 'form-little-sub': '— قانون ليتل',
+    'form-ewma': 'EWMA: CPU(t) = α·ρ + (1−α)·CPU(t−1)',
+    'ct-controls': 'عناصر التحكم',
+    'ctrl-arr': 'معدل الوصول λ', 'ctrl-arr-unit': '/ث',
+    'ctrl-svc': 'معدل الخدمة μ', 'ctrl-svc-unit': '/ث',
+    'ctrl-ram': 'RAM الأساسي', 'ctrl-ram-unit': '%',
+    'ctrl-mem': 'RAM/مهمة', 'ctrl-mem-unit': '%',
+    'btn-start': '▶ تشغيل', 'btn-pause': '⏸ إيقاف مؤقت', 'btn-reset': '↺ إعادة ضبط',
+    'btn-stress': '⚡ ضغط شديد (λ=18)', 'btn-ddos': '💥 هجوم DDoS (λ=25)',
+    'btn-high': '📈 حمل عالٍ (λ=14)', 'btn-low': '📉 حمل منخفض (λ=2)',
+    'btn-add': '➕ إضافة خادم', 'btn-remove': '➖ إزالة خادم',
+    'auto-info': '<span style="color:var(--orange)">التوسع التلقائي:</span> توسيع: متوسط المعالج > 80% أو قائمة الانتظار > 15 | تقليص: متوسط المعالج < 30% وقائمة الانتظار < 5 | وقت التبريد: 5 ثوانٍ',
+    'lb-title': 'محرك موازن الحمل',
+    'lb-sub': 'قوائم الانتظار · وقت الاستجابة · معالجة الأعطال · مقارنة الخوارزميات',
+    'lb-avg': 'متوسط وقت الاستجابة', 'lb-slow': 'أبطأ خادم', 'lb-fast': 'أسرع خادم', 'lb-pred-lbl': 'توقع التوسع',
+    'ct-dist': 'توزيع المهام', 'ct-rt': 'وقت الاستجابة لكل خادم (ms)',
+    'lg-rt': 'وقت الاستجابة ms', 'lg-sla': 'حد SLA 200ms',
+    'ct-algo': 'مقارنة الخوارزميات — مباشر',
+    'tbl-algo': 'الخوارزمية', 'tbl-complex': 'التعقيد', 'tbl-fair': 'العدالة', 'tbl-rt': 'متوسط RT', 'tbl-vs': 'مقابل الأفضل',
+    'algo-rr': 'جولة بجولة', 'algo-lc': 'أقل الاتصالات', 'algo-wt': 'بالأوزان', 'algo-rnd': 'عشوائي',
+    'fair-rr': 'عالية', 'fair-lc': 'ممتازة', 'fair-wt': 'متوسطة', 'fair-rnd': 'متوسطة',
+    'btn-rr': 'جولة بجولة — O(1)', 'btn-lc': 'أقل الاتصالات — O(n)', 'btn-wt': 'بالأوزان — O(1)', 'btn-rnd': 'عشوائي — O(1)',
+    'net-title': 'محاكاة زمن استجابة الشبكة',
+    'net-sub': 'يؤثر RTT على وقت الاستجابة — مرتبط بموازن الحمل | محسّن',
+    'ct-rtt': 'متوسط RTT', 'net-rtt-unit': 'ms RTT',
+    'ct-loss': 'فقدان الحزم', 'net-loss-unit': '% مفقود',
+    'ct-jitter': 'التذبذب', 'net-jitter-unit': 'ms تباين',
+    'ct-lat': 'زمن الاستجابة عبر الزمن',
+    'lg-rtt': 'RTT ms', 'lg-limit': 'حد 150ms', 'lg-effrt': 'RT الفعلي',
+    'ct-netctrl': 'عناصر التحكم في الشبكة',
+    'ctrl-lat': 'الزمن الأساسي', 'ctrl-lat-unit': 'ms',
+    'ctrl-jit': 'التذبذب', 'ctrl-jit-unit': 'ms',
+    'ctrl-loss': 'فقدان الحزم', 'ctrl-loss-unit': '%',
+    'ctrl-nl': 'حمل الشبكة', 'ctrl-nl-unit': '%',
+    'btn-fail': '⚡ عطل', 'btn-recover': '✓ استعادة', 'btn-cong': '🔥 ازدحام',
+    'net-formula': 'RTT = أساسي + تذبذب·N(0,1) + (حمل/100)·35 | RT الفعلي = RTT + وقت الخدمة',
+    'th-title': '// النظرية الرياضية',
+    'th-sub': '/* M/M/k · خدمة عشوائية · EWMA · توسع تلقائي · تحقق · محسّن */',
+    'th1-tag': 'نموذج قائمة M/M/k', 'th1-title': 'معدل الاستخدام ρ',
+    'th1-body': 'ρ = λ/(k·μ). ρ < 1 → مستقر، ρ ≥ 1 → غير مستقر.',
+    'th2-tag': 'نموذج EWMA للمعالج', 'th2-title': 'التمهيد الأسي',
+    'th2-body': 'CPU(t) = α·ρ(t) + (1−α)·CPU(t−1) + ε, α=0.3, ε~N(0,3.5%)',
+    'th3-tag': 'منطق التوسع التلقائي', 'th3-title': 'المعيار المركّب',
+    'th3-body': 'توسيع: متوسط المعالج > 80% أو قائمة الانتظار > 15 | تقليص: متوسط المعالج < 30% وقائمة الانتظار < 5',
+    'th4-tag': 'مقاييس التحقق', 'th4-title': 'MAE و RMSE',
+    'th4-body': 'MAE = (1/n)·Σ|y_sim−y_real|, RMSE = √[(1/n)·Σ(y_sim−y_real)²]',
+    'rp-title-page': 'تقرير الجلسة',
+    'rp-sub': 'مولّد تلقائيًا · قابل للطباعة · محسّن',
+    'btn-print': '🖨️ طباعة / PDF', 'btn-refresh': '↺ تحديث',
+    'rp-main-title': 'محاكي مراقبة الموارد الذكية',
+    'rp-sum-title': 'ملخص الجلسة',
+    'rp-dur': 'المدة', 'rp-sc': 'أحداث التوسع', 'rp-pcpu': 'ذروة المعالج',
+    'rp-pq': 'ذروة قائمة الانتظار', 'rp-cost': 'التكلفة الإجمالية', 'rp-cpt': 'التكلفة/مهمة',
+    'rp-mae': 'MAE', 'rp-rmse': 'RMSE', 'rp-sla': 'انتهاكات SLA',
+    'rp-log-title': 'سجل أحداث التوسع التلقائي',
+    'badge-stable': 'مستقر', 'badge-high': 'حمل عالٍ', 'badge-over': 'محمّل زيادة',
+    'lang-btn': '🌐 EN',
+  }
+};
+
+let currentLang = 'en';
+
+function applyLang(lang) {
+  const T = TRANSLATIONS[lang];
+  const isAr = lang === 'ar';
+  document.documentElement.lang = lang;
+  document.documentElement.dir = isAr ? 'rtl' : 'ltr';
+
+  const set = (id, key) => { const el = G(id); if(el && T[key] !== undefined) el.textContent = T[key]; };
+  const setHTML = (id, key) => { const el = G(id); if(el && T[key] !== undefined) el.innerHTML = T[key]; };
+
+  // Nav
+  setHTML('lang-nav-title', 'nav-title');
+  setHTML('lang-btn-dashboard', 'nav-dashboard');
+  setHTML('lang-btn-lb', 'nav-loadbalancer');
+  setHTML('lang-btn-network', 'nav-network');
+  setHTML('lang-btn-theory', 'nav-theory');
+  setHTML('lang-btn-report', 'nav-report');
+
+  // HW Banner
+  set('lang-hw-label', 'hw-label');
+  set('lang-hw-cores-label', 'hw-cores-label');
+  set('lang-hw-ram-label', 'hw-ram-label');
+  set('lang-hw-net-label', 'hw-net-label');
+  set('lang-hw-plat-label', 'hw-plat-label');
+  set('lang-hw-note', 'hw-note');
+
+  // Disclaimers
+  set('lang-disc-service', 'disc-service');
+  set('lang-disc-cpu', 'disc-cpu');
+  set('lang-disc-network', 'disc-network');
+  set('lang-disc-auto', 'disc-auto');
+
+  // Metric cards
+  set('lang-mc-cpu-label', 'mc-cpu-label'); set('lang-mc-cpu-sub', 'mc-cpu-sub');
+  set('lang-mc-ram-label', 'mc-ram-label'); set('lang-mc-ram-sub', 'mc-ram-sub');
+  set('lang-mc-queue-label', 'mc-queue-label'); set('lang-mc-queue-sub', 'mc-queue-sub');
+  set('lang-mc-k-label', 'mc-k-label');
+  set('lang-mc-rho-label', 'mc-rho-label'); set('lang-mc-rho-sub', 'mc-rho-sub');
+  set('lang-mc-tp-label', 'mc-tp-label'); set('lang-mc-tp-sub', 'mc-tp-sub');
+  set('lang-mc-wt-label', 'mc-wt-label'); set('lang-mc-wt-sub', 'mc-wt-sub');
+  set('lang-mc-cost-label', 'mc-cost-label'); set('lang-mc-cost-sub', 'mc-cost-sub');
+  set('lang-mc-sla-label', 'mc-sla-label'); set('lang-mc-sla-sub', 'mc-sla-sub');
+
+  // Chart titles & cost banner
+  set('lang-ct-cpu', 'ct-cpu'); set('lang-ct-srv', 'ct-srv');
+  set('lang-ct-cost-total', 'ct-cost-total'); set('lang-ct-cost-sub', 'ct-cost-sub');
+  set('lang-ct-cost-task', 'ct-cost-task'); set('lang-ct-cost-task-sub', 'ct-cost-task-sub');
+  set('lang-ct-tasks', 'ct-tasks'); set('lang-ct-tasks-sub', 'ct-tasks-sub');
+  set('lang-ct-bn', 'ct-bn');
+  set('lang-ct-mem', 'ct-mem'); set('lang-ct-tp', 'ct-tp');
+
+  // Legends
+  set('lang-lg-sim', 'lg-sim'); set('lang-lg-real', 'lg-real'); set('lang-lg-thresh', 'lg-thresh');
+  set('lang-lg-ram', 'lg-ram'); set('lang-lg-queue', 'lg-queue');
+  set('lang-lg-arr', 'lg-arr'); set('lang-lg-svc', 'lg-svc');
+
+  // Snapshot
+  set('lang-ct-log', 'ct-log'); set('lang-ct-snap', 'ct-snap');
+  set('lang-snap-rho', 'snap-rho'); set('lang-snap-stable', 'snap-stable');
+  set('lang-snap-avg', 'snap-avg'); set('lang-snap-mae', 'snap-mae');
+  set('lang-snap-rmse', 'snap-rmse'); set('lang-snap-scales', 'snap-scales');
+  set('lang-snap-pred', 'snap-pred');
+  set('lang-form-title', 'form-title');
+  set('lang-form-util-sub', 'form-util-sub');
+  set('lang-form-stable', 'form-stable'); set('lang-form-stable-ok', 'form-stable-ok');
+  set('lang-form-unstable', 'form-unstable'); set('lang-form-unstable-bad', 'form-unstable-bad');
+  set('lang-form-little-sub', 'form-little-sub');
+
+  // Controls
+  set('lang-ct-controls', 'ct-controls');
+  set('lang-ctrl-arr', 'ctrl-arr'); set('lang-ctrl-svc', 'ctrl-svc');
+  set('lang-ctrl-ram', 'ctrl-ram'); set('lang-ctrl-mem', 'ctrl-mem');
+  set('lang-btn-start', 'btn-start'); set('lang-btn-pause', 'btn-pause'); set('lang-btn-reset', 'btn-reset');
+  set('lang-btn-stress', 'btn-stress'); set('lang-btn-ddos', 'btn-ddos');
+  set('lang-btn-high', 'btn-high'); set('lang-btn-low', 'btn-low');
+  set('lang-btn-add', 'btn-add'); set('lang-btn-remove', 'btn-remove');
+  setHTML('lang-auto-info', 'auto-info');
+
+  // Load Balancer
+  set('lang-lb-title', 'lb-title'); set('lang-lb-sub', 'lb-sub');
+  set('lang-lb-avg', 'lb-avg'); set('lang-lb-slow', 'lb-slow');
+  set('lang-lb-fast', 'lb-fast'); set('lang-lb-pred-lbl', 'lb-pred-lbl');
+  set('lang-ct-dist', 'ct-dist'); set('lang-ct-rt', 'ct-rt');
+  set('lang-lg-rt', 'lg-rt'); set('lang-lg-sla', 'lg-sla');
+  set('lang-ct-algo', 'ct-algo');
+  set('lang-tbl-algo', 'tbl-algo'); set('lang-tbl-complex', 'tbl-complex');
+  set('lang-tbl-fair', 'tbl-fair'); set('lang-tbl-rt', 'tbl-rt'); set('lang-tbl-vs', 'tbl-vs');
+  set('lang-algo-rr', 'algo-rr'); set('lang-algo-lc', 'algo-lc');
+  set('lang-algo-wt', 'algo-wt'); set('lang-algo-rnd', 'algo-rnd');
+  set('lang-fair-rr', 'fair-rr'); set('lang-fair-lc', 'fair-lc');
+  set('lang-fair-wt', 'fair-wt'); set('lang-fair-rnd', 'fair-rnd');
+  set('lang-btn-rr', 'btn-rr'); set('lang-btn-lc', 'btn-lc');
+  set('lang-btn-wt', 'btn-wt'); set('lang-btn-rnd', 'btn-rnd');
+
+  // Network
+  set('lang-net-title', 'net-title'); set('lang-net-sub', 'net-sub');
+  set('lang-ct-rtt', 'ct-rtt'); set('lang-net-rtt-unit', 'net-rtt-unit');
+  set('lang-ct-loss', 'ct-loss'); set('lang-net-loss-unit', 'net-loss-unit');
+  set('lang-ct-jitter', 'ct-jitter'); set('lang-net-jitter-unit', 'net-jitter-unit');
+  set('lang-ct-lat', 'ct-lat');
+  set('lang-lg-rtt', 'lg-rtt'); set('lang-lg-limit', 'lg-limit'); set('lang-lg-effrt', 'lg-effrt');
+  set('lang-ct-netctrl', 'ct-netctrl');
+  set('lang-ctrl-lat', 'ctrl-lat'); set('lang-ctrl-jit', 'ctrl-jit');
+  set('lang-ctrl-loss', 'ctrl-loss'); set('lang-ctrl-nl', 'ctrl-nl');
+  set('lang-btn-fail', 'btn-fail'); set('lang-btn-recover', 'btn-recover'); set('lang-btn-cong', 'btn-cong');
+  set('lang-net-formula', 'net-formula');
+
+  // Theory
+  set('lang-th-title', 'th-title'); set('lang-th-sub', 'th-sub');
+  set('lang-th1-tag', 'th1-tag'); set('lang-th1-title', 'th1-title'); set('lang-th1-body', 'th1-body');
+  set('lang-th2-tag', 'th2-tag'); set('lang-th2-title', 'th2-title'); set('lang-th2-body', 'th2-body');
+  set('lang-th3-tag', 'th3-tag'); set('lang-th3-title', 'th3-title'); set('lang-th3-body', 'th3-body');
+  set('lang-th4-tag', 'th4-tag'); set('lang-th4-title', 'th4-title'); set('lang-th4-body', 'th4-body');
+
+  // Report
+  set('lang-rp-title-page', 'rp-title-page'); set('lang-rp-sub', 'rp-sub');
+  set('lang-btn-print', 'btn-print'); set('lang-btn-refresh', 'btn-refresh');
+  set('lang-rp-main-title', 'rp-main-title'); set('lang-rp-sum-title', 'rp-sum-title');
+  set('lang-rp-dur', 'rp-dur'); set('lang-rp-sc', 'rp-sc'); set('lang-rp-pcpu', 'rp-pcpu');
+  set('lang-rp-pq', 'rp-pq'); set('lang-rp-cost', 'rp-cost'); set('lang-rp-cpt', 'rp-cpt');
+  set('lang-rp-mae', 'rp-mae'); set('lang-rp-rmse', 'rp-rmse'); set('lang-rp-sla', 'rp-sla');
+  set('lang-rp-log-title', 'rp-log-title');
+
+  // Lang toggle button
+  set('lang-toggle', 'lang-btn');
+
+  // Update badge text only if it's showing a known state
+  const badge = G('sysbadge');
+  if(badge) {
+    const cur = badge.textContent.trim();
+    if(cur === TRANSLATIONS['en']['badge-stable'] || cur === TRANSLATIONS['ar']['badge-stable']) badge.textContent = T['badge-stable'];
+    else if(cur === TRANSLATIONS['en']['badge-high'] || cur === TRANSLATIONS['ar']['badge-high']) badge.textContent = T['badge-high'];
+    else if(cur === TRANSLATIONS['en']['badge-over'] || cur === TRANSLATIONS['ar']['badge-over']) badge.textContent = T['badge-over'];
+  }
+}
+
+function toggleLang() {
+  currentLang = currentLang === 'en' ? 'ar' : 'en';
+  applyLang(currentLang);
+}
+
+// Patch badge updates to respect language
+const _origTick = window.tick;
+// Override badge text in tick to use current lang
+const _origBadgeStable = 'Stable', _origBadgeHigh = 'High Load', _origBadgeOver = 'Overloaded';
+// Intercept S() calls for sysbadge by wrapping the badge update
+const _origS = window._S_lang_orig || S;
+// We patch the badge inside tick by overriding textContent setter awareness via applyLang
+// The badge is updated in tick() — we handle it by re-translating after each tick
+const _origTickFn = tick;
+window.tick = function() { _origTickFn(); const b = G('sysbadge'); if(b) { const t2 = TRANSLATIONS[currentLang]; if(b.textContent === 'Stable' || b.textContent === 'مستقر') b.textContent = t2['badge-stable']; else if(b.textContent === 'High Load' || b.textContent === 'حمل عالٍ') b.textContent = t2['badge-high']; else if(b.textContent === 'Overloaded' || b.textContent === 'محمّل زيادة') b.textContent = t2['badge-over']; } };
+// ===================== END LANGUAGE SYSTEM =====================
+window.showPage = showPage; window.startSim = startSim; window.stopSim = stopSim; window.resetSim = resetSim;
+window.stressTest = stressTest; window.ddosAttack = ddosAttack; window.scHigh = scHigh; window.scLow = scLow;
+window.manualScaleUp = manualScaleUp; window.manualScaleDown = manualScaleDown; window.setAlgo = setAlgo;
+window.netFail = () => { try { const slLat = G('sl-lat'); if(slLat) slLat.value = 180; const llLat = G('ll-lat'); if(llLat) llLat.textContent = '180'; const slJit = G('sl-jit'); if(slJit) slJit.value = 80; const llJit = G('ll-jit'); if(llJit) llJit.textContent = '80'; const slLoss = G('sl-loss'); if(slLoss) slLoss.value = 20; const llLoss = G('ll-loss'); if(llLoss) llLoss.textContent = '20'; const slNl = G('sl-nl'); if(slNl) slNl.value = 95; const llNl = G('ll-nl'); if(llNl) llNl.textContent = '95'; addLog('Network failure!', 'r'); } catch(e) {} };
+window.netRecover = () => { try { const slLat = G('sl-lat'); if(slLat) slLat.value = 20; const llLat = G('ll-lat'); if(llLat) llLat.textContent = '20'; const slJit = G('sl-jit'); if(slJit) slJit.value = 10; const llJit = G('ll-jit'); if(llJit) llJit.textContent = '10'; const slLoss = G('sl-loss'); if(slLoss) slLoss.value = 1; const llLoss = G('ll-loss'); if(llLoss) llLoss.textContent = '1'; const slNl = G('sl-nl'); if(slNl) slNl.value = 40; const llNl = G('ll-nl'); if(llNl) llNl.textContent = '40'; addLog('Network recovered', 'g'); } catch(e) {} };
+window.netCongestion = () => { try { const slNl = G('sl-nl'); if(slNl) slNl.value = 90; const llNl = G('ll-nl'); if(llNl) llNl.textContent = '90'; const slJit = G('sl-jit'); if(slJit) slJit.value = 50; const llJit = G('ll-jit'); if(llJit) llJit.textContent = '50'; addLog('Severe network congestion', 'w'); } catch(e) {} };
+window.genReport = genReport;
+</script>
+</body>
+</html>
